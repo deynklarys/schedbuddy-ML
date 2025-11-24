@@ -376,6 +376,27 @@ def main():
         import json
         output = []
         for course in courses:
+            # Parse schedule into structured format
+            # Split days/times by "/" separator
+            days_list = course.days.split('/')
+            times_list = course.time.split(' / ')
+            rooms_list = course.room.split(' / ')
+            
+            # Create schedule entries (pair each day with its corresponding time)
+            schedule = []
+            for i in range(max(len(days_list), len(times_list))):
+                day = days_list[i].strip() if i < len(days_list) else ""
+                time = times_list[i].strip() if i < len(times_list) else ""
+                
+                if day or time:  # Only add if we have at least day or time
+                    schedule.append({
+                        "days": day,
+                        "time": time
+                    })
+            
+            # Get primary room (first one)
+            primary_room = rooms_list[0].strip() if rooms_list else ""
+            
             output.append({
                 'code': course.code,
                 'subject': course.subject,
@@ -385,9 +406,8 @@ def main():
                     'lab': course.lab
                 },
                 'class': course.class_section,
-                'days': course.days,
-                'time': course.time,
-                'room': course.room,
+                'schedule': schedule,
+                'room': primary_room,
                 'faculty': course.faculty
             })
         
@@ -397,7 +417,7 @@ def main():
         
         print(f"\n💾 Schedule exported to: {output_file}")
         print(f"📊 Total courses: {len(courses)}")
-        print(f"📖 Total units: {sum(float(c.credit) for c in courses)}")
+        print(f"📖 Total credit units: {sum(float(c.credit) for c in courses)}")
         
     except Exception as e:
         print(f"\n❌ Error processing COR: {str(e)}")
