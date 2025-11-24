@@ -193,7 +193,7 @@ class BUCORParser:
             after_units = remaining[subject_end_pos + len(unit_match.group(0)):].strip()
             
             # Extract class section (e.g., "BSCS 3-A")
-            class_pattern = r'(BSCS\s+\d+-[A-Z])'
+            class_pattern = r'([A-Z]{2,5}\s*+\d+-[A-Z])'
             class_match = re.search(class_pattern, after_units)
             class_section = class_match.group(1) if class_match else ""
             
@@ -203,7 +203,7 @@ class BUCORParser:
                 after_class = after_units
             
             # Extract days (Sat, Tu, TuTh, MW, F, etc.)
-            days_pattern = r'\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun|M|T|W|Th|F|Sa|TuTh|MW|MWF|TTh|TF|MTh)\b'
+            days_pattern = r'\b(M|Tu|W|Th|F|Sat|Sun|TuTh|MW|MWF|TF|MTh)\b'
             days_match = re.search(days_pattern, after_class)
             days = days_match.group(1) if days_match else ""
             
@@ -237,13 +237,20 @@ class BUCORParser:
             faculty_match = re.search(faculty_pattern, after_room)
             faculty = faculty_match.group(1) if faculty_match else after_room.strip()
             
-            # Handle multi-line courses (check next_lines for additional times/rooms)
+            # Handle multi-line courses (check next_lines for additional times/rooms/days)
             if next_lines:
                 for next_line in next_lines[:3]:  # Check up to 3 next lines
                     # If next line has time but no course code, it's a continuation
                     if re.search(time_pattern, next_line) and not re.match(r'^[A-Z]{2,4}\s+\d{1,4}', next_line):
+                        extra_days = re.search(days_pattern, next_line)
                         extra_time = re.search(time_pattern, next_line)
                         extra_room = re.search(room_pattern, next_line)
+                        
+                        if extra_days:
+                            # Add extra days, avoiding duplicates
+                            new_day = extra_days.group(1)
+                            if new_day not in days:
+                                days += f"/{new_day}"
                         if extra_time:
                             time += f" / {extra_time.group(1)}"
                         if extra_room:
