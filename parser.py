@@ -34,6 +34,17 @@ class BUCORParser:
         # Tesseract configuration
         self.config = r'--oem 3 --psm 6'
     
+    @staticmethod
+    def clean_text(text: str) -> str:
+        """Simple cleanup for subject text extracted from OCR."""
+        if not text:
+            return ""
+        # Keep only letters, digits and spaces (strip symbols/punctuation)
+        text = re.sub(r"[^A-Za-z0-9\s]", "", text)
+        # Collapse multiple spaces
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+
     def preprocess_image(self, image_path: str) -> Image.Image:
         """
         Preprocess the COR image for better OCR accuracy
@@ -187,8 +198,9 @@ class BUCORParser:
             
             # Subject is between code and units
             subject_end_pos = remaining.find(unit_match.group(0))
-            subject = remaining[:subject_end_pos].strip()
-            
+            dirty_subject = remaining[:subject_end_pos].strip()
+            subject = self.clean_text(dirty_subject)
+
             # Everything after units
             after_units = remaining[subject_end_pos + len(unit_match.group(0)):].strip()
             

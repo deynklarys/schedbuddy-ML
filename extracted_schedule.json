@@ -8,8 +8,16 @@
       "lab": "1.0"
     },
     "class": "BSCS 3-A",
-    "days": "Sat",
-    "time": "08:00 AM-10:00 AM / 09:00 AM-12:00 PM",
+    "schedule": [
+      {
+        "days": "Sat",
+        "time": "08:00 AM-10:00 AM"
+      },
+      {
+        "days": "TuTh",
+        "time": "09:00 AM-12:00 PM"
+      }
+    ],
     "room": "CS-02-102",
     "faculty": "CANON, M ,"
   },
@@ -22,8 +30,16 @@
       "lab": "0.0"
     },
     "class": "BSCS 3-A",
-    "days": "",
-    "time": "05:30 PM-08:30 PM / 01:00 PM-03:00 PM",
+    "schedule": [
+      {
+        "days": "Tu",
+        "time": "05:30 PM-08:30 PM"
+      },
+      {
+        "days": "",
+        "time": "01:00 PM-03:00 PM"
+      }
+    ],
     "room": "CS-04-205",
     "faculty": "Sotto, G"
   },
@@ -36,8 +52,20 @@
       "lab": "0.0"
     },
     "class": "BSCS 3-A",
-    "days": "",
-    "time": "01:00 PM-04:00 PM / 01:00 PM-03:00 PM / 05:30 PM-08:30 PM",
+    "schedule": [
+      {
+        "days": "Tu",
+        "time": "01:00 PM-04:00 PM"
+      },
+      {
+        "days": "",
+        "time": "01:00 PM-03:00 PM"
+      },
+      {
+        "days": "",
+        "time": "05:30 PM-08:30 PM"
+      }
+    ],
     "room": "CS-04-203",
     "faculty": "Satuito, A"
   },
@@ -50,22 +78,46 @@
       "lab": "1.0"
     },
     "class": "BSCS 3-A",
-    "days": "F",
-    "time": "09:00 AM-12:00 PM / 01:00 PM-03:00 PM / 05:30 PM-08:30 PM / 04:00 PM-05:30 PM",
-    "room": "CS-02-101 / CS-02-201",
+    "schedule": [
+      {
+        "days": "F",
+        "time": "09:00 AM-12:00 PM"
+      },
+      {
+        "days": "MW",
+        "time": "01:00 PM-03:00 PM"
+      },
+      {
+        "days": "",
+        "time": "05:30 PM-08:30 PM"
+      },
+      {
+        "days": "",
+        "time": "04:00 PM-05:30 PM"
+      }
+    ],
+    "room": "CS-02-101",
     "faculty": "Maceda, L"
   },
   {
     "code": "CS Elective",
-    "subject": "_— Artificial Intelligence",
+    "subject": "Artificial Intelligence",
     "unit": {
       "credit": "3.0",
       "lecture": "3.0",
       "lab": "0.0"
     },
     "class": "BSCS 3-A",
-    "days": "MW",
-    "time": "04:00 PM-05:30 PM / 01:00 PM-02:00 PM",
+    "schedule": [
+      {
+        "days": "MW",
+        "time": "04:00 PM-05:30 PM"
+      },
+      {
+        "days": "",
+        "time": "01:00 PM-02:00 PM"
+      }
+    ],
     "room": "CS-02-201",
     "faculty": "Sy, C"
   },
@@ -78,8 +130,16 @@
       "lab": "0.0"
     },
     "class": "BSCS 3-A",
-    "days": "Sat",
-    "time": "10:00 AM-12:00 PM / 01:00 PM-02:00 PM",
+    "schedule": [
+      {
+        "days": "Sat",
+        "time": "10:00 AM-12:00 PM"
+      },
+      {
+        "days": "",
+        "time": "01:00 PM-02:00 PM"
+      }
+    ],
     "room": "CAL-01-401",
     "faculty": "Medalla, V"
   }
