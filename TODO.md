@@ -14,3 +14,12 @@
 
 - [x] **class_pattern in `parser.py`**
     - Only considers "BSCS". Consider broadening this by a more general pattern like `r"\\b[A-Z]{2,5}\\b"`.
+
+**Suggestions ni Jomar**
+- [ ] **yolo sa automation**
+    - semantic relationship ng days, time
+
+- [ ] **gamitin ang course codes as reference for subject names**
+
+
+[Markdown Cheat Sheet](https://www.markdownguide.org/cheat-sheet/)
