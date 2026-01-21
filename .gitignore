@@ -1,52 +1,9 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# C extensions
-*.so
-
-# Distribution / packaging
-build/
-dist/
-*.egg-info/
-
-# Virtual environments
 .venv/
-venv/
-env/
-ENV/
-
-# Pytest / mypy
-.pytest_cache/
-.mypy_cache/
-
-# VS Code / JetBrains
-.vscode/
-.idea/
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs, databases, secrets
-*.log
-*.sqlite3
-*.db
-*.pem
-*.key
-.env
-secrets.json
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Pickles / cache
-*.pickle
 *.pkl
 
-# Other
-pip-log.txt
+# Images
+*.jpg
+*.png
+*.pdf
+*.jpeg
 
-# Local IDE workspace (uncomment if you want to ignore these)
-# *.code-workspace
