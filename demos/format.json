@@ -1,7 +1,7 @@
 [
   {
-    "code": "CS 114",
-    "subject": "Operating Systems",
+    "course_code": "CS 114",
+    "course_title": "Operating Systems",
     "unit": {
       "credit": "3.0",
       "lecture": "2.0",
@@ -11,15 +11,20 @@
     "schedule": [
       {
         "days": "Sat",
-        "time": "08:00 AM-10:00 AM",
-        "room": "CS-02-102"
+        "time": "08:00 AM",
+        "time_end": "10:00 AM",
+        "room": "CS-02-102",
+        "faculty": "CANON, M ,"
+
       },
       {
         "days": "Sat",
-        "time": "08:00 AM-10:00 AM",
-        "room": "CS-02-102"
+        "time": "08:00 AM",
+        "time_end": "10:00 AM",
+        "room": "CS-02-102",
+        "faculty": "CANON, M ,"
+
       }
-    ],
-    "faculty": "CANON, M ,"
+    ]
   }
 ]

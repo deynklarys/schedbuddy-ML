@@ -120,7 +120,7 @@ class BUCORParser:
         schedule_lines = []
         in_schedule = False
         
-        keywords = ['code', 'subject', 'unit', 'class', 'days', 'time', 'room', 'faculty']
+        keywords = ['code', 'subject', 'units', 'class', 'days', 'time', 'room', 'faculty']
 
         for line in lines:
             line_lower = line.lower()
@@ -342,7 +342,7 @@ def main():
     if len(sys.argv) > 1:
         image_path = sys.argv[1]
     else:
-        image_path = "images/sample-cor.png"
+        image_path = "../images/original/watermarked.png"
         print(f"ℹ️  No image provided. Using default: {image_path}")
     
     # Check if file exists
