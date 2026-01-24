@@ -5,8 +5,10 @@ from pdf2image import convert_from_path
 
 # Rename images in sequential order. If file is pdf, convert first.
 def rename_images(source_dir, dest_dir):
-    # Create dest directory if doesn't exist
-    dest_dir.mkdir(exist_ok=True)
+    # Create new dest_dir
+    if dest_dir.exists():
+        shutil.rmtree(dest_dir)
+    dest_dir.mkdir(parents=True, exist_ok=True)
 
     # Get all image files from source_dir
     image_extensions = {'.jpg', '.jpeg', '.png'}
