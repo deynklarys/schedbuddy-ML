@@ -1,0 +1,6 @@
+path: ./datasets
+train: train/images
+val: validation/images
+nc: 1
+names:
+- schedule-table
