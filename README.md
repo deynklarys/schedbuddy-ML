@@ -1,82 +1,47 @@
 # SchedBuddy-ML
 
 **Project Overview**
-- **Purpose:**: Small OCR + image-processing toolkit that extracts schedule data from images and demonstrates text recognition workflows.
-- **Files:**: `parser.py`, `tesseract.py`, `ocr-ml-system.py`, `cv2-demo.py`, `extracted_schedule.json`, `ocr_raw.txt`, and an `images/` folder.
-
-**Prerequisites**
-- **Python:**: Python 3.10+ recommended. Ensure `python` is on your `PATH`.
-- **Tesseract OCR:**: Install Tesseract OCR (system binary) for your OS.
-  - Windows installer: https://github.com/tesseract-ocr/tesseract
-  - After install, ensure the Tesseract installation folder (e.g. `C:\Program Files\Tesseract-OCR`) is in your `PATH` or set the `TESSERACT_CMD` environment variable.
-
-**Quick Setup (Windows PowerShell)**
-1. Create and activate a virtual environment:
-
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+- **Purpose:**: Schedule builder that integrates artificial intelligence to automatically generate timetable, specifically for Bicol University students.
+-**Machine Learning resources:** Label Studio, YOLOv8
+---
+**Training the Model**
+1. Upload the dataset. With Label Studio, the folder structure should be:
+```
+├──images # folder containing the images
+├──labels # folder containing the labels in YOLO annotation format
+├──classes.txt # labelmap file that contains all the classes
 ```
 
-2. Upgrade pip and install Python dependencies:
-
-```powershell
-python -m pip install --upgrade pip
-pip install -r requirements.txt
+2. Split images into train and validation data
+```
+cd label-studio
+python train_val_split.py --datapath="[Path to dataset]" --train_pct=0.7
 ```
 
-3. Verify Tesseract is available:
-
-```powershell
-tesseract --version
+3. Install requirements (Ultralytics)
+```
+pip install ultralytics
 ```
 
-If `tesseract` is not found, add its install directory to your `PATH` or set the `TESSERACT_CMD` environment variable used by `pytesseract`.
-
-Example (set `TESSERACT_CMD` for the current user):
-
-```powershell
-[Environment]::SetEnvironmentVariable("TESSERACT_CMD","C:\\Program Files\\Tesseract-OCR\\tesseract.exe","User")
-# Restart your shell after this change
+4.  Create Ultralytics training configuration YAML file
+```
+cd label-studio
+python create-yaml.py
 ```
 
-If PowerShell blocks activation scripts, allow local scripted activation for the current user:
-
-```powershell
-Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+5. Train model
+- **Model architecture & size (model):** Larger models run slower but have higher accuracy, while smaller models run faster but have lower accuracy. You can train YOLOv8 or YOLOv5 models by substituting yolo11 for yolov8 or yolov5.
+- **Number of epochs (epochs):** In machine learning, one “epoch” is one single pass through the full training dataset. If your dataset has less than 200 images, a good starting point is 60 epochs. If your dataset has more than 200 images, a good starting point is 40 epochs.
+- **Resolution (imgsz):** Resolution has a large impact on the speed and accuracy of the model: a lower resolution model will have higher speed but less accuracy. YOLO models are typically trained and inferenced at a 640x640 resolution. However, if you want your model to run faster or know you will be working with low-resolution images, try using a lower resolution like 480x480.
+```
+yolo detect train data=/content/data.yaml model=yolov8.pt epochs=60 imgsz=640
 ```
 
-**Run Examples**
-- **Run the parser on an image:**
-
-```powershell
-python parser.py images/sample-cor.png
+6. Test Model
 ```
+yolo detect predict model=runs/detect/train/weights/best.pt source=data/validation/images save=True
 
-- **Run demo scripts:**
-
-```powershell
-python cv2-demo.py
-python ocr-ml-system.py
-python tesseract.py
+cd label-studio
+python test-model.py
 ```
-
-**Repository Notes**
-- **Dependencies:**: See `requirements.txt` (OpenCV, pytesseract, Pillow, numpy).
-- **Sample data:**: `extracted_schedule.json` and `ocr_raw.txt` contain sample output and intermediate OCR text.
-- **Images:**: Put test images in the `images/` directory. Use descriptive file names for easier testing.
-
-**Troubleshooting**
-- **pytesseract.TesseractNotFoundError:**: Ensure `tesseract` is installed and either on `PATH` or `TESSERACT_CMD` is set.
-- **OpenCV import errors:**: Make sure `opencv-python` is installed inside the activated venv.
-- **Permission/Activation errors in PowerShell:**: Run `Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned` and reopen the shell.
-
-**Development & Contributing**
-- **Coding style:**: Keep changes focused and minimal. Follow repository's code style.
-- **Testing changes:**: Run the relevant script(s) locally and verify output in `extracted_schedule.json` or `ocr_raw.txt`.
-- **Pull requests:**: Open PRs against `main` and include a short description and example input/output.
-
-**Contact / Maintainer**
-- **Owner:**: `deynklarys` (repository owner). Open issues or PRs for questions or improvements.
-
---
+You can check the results at `runs/detect/predict` folder
