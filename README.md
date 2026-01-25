@@ -2,7 +2,7 @@
 
 **Project Overview**
 - **Purpose:**: Schedule builder that integrates artificial intelligence to automatically generate timetable, specifically for Bicol University students.
--**Machine Learning resources:** Label Studio, YOLOv8
+- **Machine Learning resources:** Label Studio, YOLOv8
 ---
 **Training the Model**
 1. Upload the dataset. With Label Studio, the folder structure should be:
