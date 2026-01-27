@@ -2,6 +2,7 @@ import os
 import shutil
 from pathlib import Path
 from pdf2image import convert_from_path
+from config import POPPLER_PATH
 
 # Rename images in sequential order. If file is pdf, convert first.
 def rename_images(source_dir, dest_dir):
@@ -54,9 +55,8 @@ def convert_from_pdf(source_dir, dest_dir,  poppler_path):
 if __name__ == "__main__":
     source_dir = Path("../images")
     dest_dir = Path("./images")
-    poppler_path=r"C:\Applications ni Deyn\Poppler\poppler-25.12.0\Library\bin"
 
     # Convert .pdf to .png if there are.
     convert_from_pdf(source_dir, dest_dir=Path("../images"), 
-                     poppler_path=r"C:\Applications ni Deyn\Poppler\poppler-25.12.0\Library\bin")
+                     poppler_path=POPPLER_PATH)
     rename_images(source_dir, dest_dir)
