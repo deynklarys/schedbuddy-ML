@@ -1,6 +1,6 @@
-path: ./datasets
+path: ./data
 train: train/images
 val: validation/images
 nc: 1
 names:
-- schedule-table
+- table

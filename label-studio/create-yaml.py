@@ -21,7 +21,7 @@ def create_data_yaml(path_to_classes_txt, path_to_data_yaml):
     # Create data dictionary
     # Use POSIX-style paths so Ultralytics resolves them correctly on any OS
     data = {
-        'path': './datasets',  # base folder that contains train/ and validation/
+        'path': './data',  # base folder that contains train/ and validation/
         'train': 'train/images',
         'val': 'validation/images',
         'nc': number_of_classes,
@@ -36,7 +36,7 @@ def create_data_yaml(path_to_classes_txt, path_to_data_yaml):
     return
 
 # Define path to classes.txt and run function
-path_to_classes_txt = ".\\table-cropping\\classes.txt"
+path_to_classes_txt = ".\\table-schedule\\classes.txt"
 path_to_data_yaml = "data.yaml"
 
 create_data_yaml(path_to_classes_txt, path_to_data_yaml)
