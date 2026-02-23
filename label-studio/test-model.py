@@ -1,4 +1,4 @@
-# yolo detect predict model=runs/detect/train/weights/best.pt source=datasets/validation/images save=True
+# yolo detect predict model=runs/detect/train/weights/best.pt source=data/validation/images save=True save_txt=True
 
 import glob
 from IPython.display import Image, display
