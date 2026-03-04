@@ -1,5 +1,6 @@
 .venv/
 model/__pycache__
+*.cache
 TODO.md
 
 *.pt
