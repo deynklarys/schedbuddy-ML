@@ -12,7 +12,7 @@ save_period: -1
 cache: false
 device: cpu
 workers: 8
-project: null
+project: C:\Computer-Science\schedbuddy-ML\model\runs\detect
 name: train
 exist_ok: true
 pretrained: true
@@ -103,4 +103,4 @@ auto_augment: randaugment
 erasing: 0.4
 cfg: null
 tracker: botsort.yaml
-save_dir: C:\Computer-Science\schedbuddy-ML\label-studio\runs\detect\train
+save_dir: C:\Computer-Science\schedbuddy-ML\model\runs\detect\train
