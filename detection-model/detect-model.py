@@ -196,9 +196,17 @@ pipeline_output = detector.process_image(model_type="structure", threshold=0.9, 
 # Example of downstream access for further processing
 detections = pipeline_output["plot"]["detections"]
 detections_output_path = "detections.json"
-with open(detections_output_path, "w", encoding="utf-8") as f:
-    json.dump(detections, f, indent=2)
 
-print(f"Detections available for processing: {len(detections)}")
-print("Detections", detections)
+# Explicit arrays
+rows = [item for item in detections if "row" in item["label"].lower()]
+columns = [item for item in detections if "column" in item["label"].lower()]
+
+with open(detections_output_path, "w", encoding="utf-8") as f:
+    json.dump({"rows": rows, "columns": columns}, f, indent=2)
+
+print(f"Detected rows: {len(rows)}")
+print(f"Detected columns: {len(columns)}")
+
 print(f"Detections saved to: {detections_output_path}")
+
+
