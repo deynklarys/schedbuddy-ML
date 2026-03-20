@@ -1,11 +1,8 @@
-"""
-Borderless Table Detection & OCR Extraction
-Uses Microsoft Table Transformer for detection + Tesseract for OCR.
-"""
 
 from __future__ import annotations
 import json
 import logging
+import re
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Optional
@@ -69,7 +66,9 @@ def ocr_crop(image: Image.Image, box: list[int]) -> str:
     # Crop image to box and run Tesseract OCR
 
     crop = image.crop(tuple(box))
-    return pytesseract.image_to_string(crop, config=TESSERACT_CONFIG)
+    raw_text = pytesseract.image_to_string(crop, config=TESSERACT_CONFIG)
+    # Flatten OCR output so JSON values do not contain embedded newlines.
+    return re.sub(r"\s+", " ", raw_text).strip()
 
 # Main class
 class BorderlessTableDetector:
@@ -252,7 +251,7 @@ class BorderlessTableDetector:
             extracted = []
             for col in columns:
                 header_cell = bbox_intersection(header_box, col.bbox)
-                extracted.append(ocr_crop(self.image, header_cell).strip() 
+                extracted.append(ocr_crop(self.image, header_cell)
                                  if header_cell else "")
             
             if any(extracted):
@@ -273,7 +272,7 @@ class BorderlessTableDetector:
 # Entry point
 def main() -> None:
     base_dir = Path(__file__).resolve().parent
-    IMAGE_PATH = base_dir / "3eec9544-151_table_1.jpg"
+    IMAGE_PATH = base_dir / "87ef5a9f-25_table_1.jpg"
     OUTPUT_IMAGE = base_dir / "output.png"
     DETECTIONS_JSON = base_dir / "detections.json"
     TABLE_JSON = base_dir / "extracted_table.json"
@@ -297,7 +296,7 @@ def main() -> None:
     table_data = detector.extract_table(detections)
     Path(TABLE_JSON).write_text(
         json.dumps(
-            {"headers": table_data.headers, "rows": table_data.rows, "cells": table_data.cells},
+            {"image file:": str(IMAGE_PATH), "ocr configuration:": TESSERACT_CONFIG, "headers": table_data.headers, "rows": table_data.rows, "cells": table_data.cells},
             ensure_ascii=False,
             indent=2
         ),
