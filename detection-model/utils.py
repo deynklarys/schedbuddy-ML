@@ -27,4 +27,4 @@ def ocr_crop(image: Image.Image, box: list[int]) -> str:
     """Crop image to box and run Tesseract OCR."""
 
     crop = image.crop(tuple(box))
-    return pytesseract.image_to_string(crop, config=TESSERACT_CONFIG).strip("\f\n\r")
+    return pytesseract.image_to_string(crop, config=TESSERACT_CONFIG).strip()
