@@ -22,6 +22,9 @@ def parse_units_cell(text: str) -> dict[str, float]:
     Returns:
         Dictionary with keys "Credit", "Lec", and "Lab" as floats.
         Missing or invalid values default to 0.0.
+
+    TODO: Parse extracted text and use it as subheader names.
+    FIXME: Current implementation uses hardcoded subcolumns. 
     """
     sub_columns = ("Credit", "Lec", "Lab")
     units = re.findall(r"\d+(?:\.\d+)?", text.replace(",", "."))
