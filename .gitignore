@@ -5,6 +5,8 @@
 # For sample images
 *.jpg
 *.png
+*.jfif
+*.jpeg
 
 TODO.md
 
