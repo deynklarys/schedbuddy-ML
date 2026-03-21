@@ -166,25 +166,32 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
                 row_dict[col_name] = text
 
             cell_records.append(CellRecord(row=r_idx, column=c_idx, bbox=box, text=text))
-        
-        units = row_dict.pop("col3")
+
+        # Extract units column if present; some tables may have fewer than 3 columns.
+        units = row_dict.pop("col3", None)
 
         # Expand multiline columns with carry-forward
         expanded = expand_multiline_rows(row_dict)
 
-        for entry in expanded:
-            entry["col3"] = units
+        # Reattach units data to each expanded entry when available.
+        if units is not None:
+            for entry in expanded:
+                entry["col3"] = units
 
         rows_as_dicts.extend(expanded)
 
     # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
     # TODO: Find a way to parse Unit/Credit/Lec/Lab for sub-columning
+    extracted = []
     if header_dets:
         header_box = header_dets[0].bbox
-        extracted = []
         for col in columns:
             header_cell = bbox_intersection(header_box, col.bbox)
-            extracted.append(ocr_crop(detector.image, header_cell).strip())
+            if header_cell:
+                text = ocr_crop(detector.image, header_cell).strip()
+            else:
+                text = ""
+            extracted.append(text)
 
     if any(extracted):
         clean = [t or f"col_{i + 1}" for i, t in enumerate(extracted)]
@@ -194,7 +201,12 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         ]
         header_names = clean
 
-    logger.info("Extracted %d rows × %d columns", len(rows), n_cols)
+    logger.info(
+        "Extracted %d output rows (from %d detected rows) × %d columns",
+        len(rows_as_dicts),
+        len(rows),
+        n_cols,
+    )
     return TableData(
         headers=header_names,
         rows=rows_as_dicts,
