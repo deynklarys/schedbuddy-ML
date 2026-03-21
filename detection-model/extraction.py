@@ -30,6 +30,36 @@ def parse_units_cell(text: str) -> dict[str, float]:
     default.update(zip(sub_columns, map(float, units)))
     return default
 
+def expand_multiline_rows(row: dict[str, str]) -> list[dict[str, str]]:
+    """
+    Given rows with multiline values separated by newlinein some columns, 
+    expland into per-schedule-entry dicts. If a column has fewer lines than
+    the max, the last known value is carried forward.
+    """
+
+    split_rows = {
+        col: [line.strip() for line in val.split("\n") if line.strip()]
+        for col, val in row.items()
+    }
+
+    max_lines = max(len(lines) for lines in split_rows.values())
+
+    entries = []
+    last_entry = {} # carry forward the last non-empty value per column
+
+    for i in range(max_lines):
+        entry = {}
+        for col, lines in split_rows.items():
+            if i < len(lines):
+                entry[col] = lines[i]
+                last_entry[col] = lines[i]
+            else: 
+                entry[col] = last_entry.get(col, "")
+        
+        entries.append(entry)
+
+    return entries
+
 def extract_table(detector, detections: list[Detection]) -> TableData:
     """Extract structured table data from structure-model detections via OCR.
     
@@ -76,9 +106,18 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
                 row_dict[col_name] = parse_units_cell(text)
             else:
                 row_dict[col_name] = text
-                
+
             cell_records.append(CellRecord(row=r_idx, column=c_idx, bbox=box, text=text))
-        rows_as_dicts.append(row_dict)
+        
+        units = row_dict.pop("col3")
+
+        # Expand multiline columns with carry-forward
+        expanded = expand_multiline_rows(row_dict)
+
+        for entry in expanded:
+            entry["col3"] = units
+
+        rows_as_dicts.extend(expanded)
 
     # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
     # TODO: Find a way to parse Unit/Credit/Lec/Lab for sub-columning
