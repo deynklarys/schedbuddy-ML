@@ -3,12 +3,10 @@
 from __future__ import annotations
 import logging
 from dataclasses import asdict
-from PIL import Image
 import re
 
 from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
-from config import TESSERACT_CONFIG
 
 logger = logging.getLogger(__name__)
 
@@ -71,8 +69,7 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
     extracted = []
     for col in columns:
         header_cell = bbox_intersection(header_box, col.bbox)
-        extracted.append(ocr_crop(detector.image, header_cell)
-                        if header_cell else "")
+        extracted.append(ocr_crop(detector.image, header_cell).strip())
 
     if any(extracted):
         clean = [t or f"col_{i + 1}" for i, t in enumerate(extracted)]
