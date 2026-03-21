@@ -32,8 +32,8 @@ def parse_units_cell(text: str) -> dict[str, float]:
 
 def expand_multiline_rows(row: dict[str, str]) -> list[dict[str, str]]:
     """
-    Given rows with multiline values separated by newlinein some columns, 
-    expland into per-schedule-entry dicts. If a column has fewer lines than
+    Given rows with multiline values separated by newline in some columns, 
+    expand into per-schedule-entry dicts. If a column has fewer lines than
     the max, the last known value is carried forward.
     
     FIXME: Current implementation repeats the entire row data changing only 
