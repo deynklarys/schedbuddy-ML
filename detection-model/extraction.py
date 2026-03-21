@@ -41,6 +41,8 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
     
     Returns:
         TableData with headers, rows, and individual cell records
+
+    FIXME: "Units" is hardcoded. Improve column checking for passing units cell text
     """
 
     if detector.image is None:
