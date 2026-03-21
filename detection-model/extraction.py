@@ -87,8 +87,8 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
             text = ocr_crop(detector.image, box) if box else ""
             col_name = header_names[c_idx - 1]
 
-            if col_name == "col3":
-                row_dict["col3"] = parse_units_cell(text)
+            if "Units" in col_name:
+                row_dict["Units"] = parse_units_cell(text)
             else:
                 row_dict[col_name] = text
                 
