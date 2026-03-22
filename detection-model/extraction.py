@@ -32,8 +32,8 @@ def parse_units_cell(text: str) -> dict[str, float]:
 
 def expand_multiline_rows(row: dict[str, str]) -> list[dict[str, str]]:
     """
-    Given rows with multiline values separated by newlinein some columns, 
-    expland into per-schedule-entry dicts. If a column has fewer lines than
+    Expand rows with with multiline values separated by newline into 
+    per-schedule-entry dicts. If a column has fewer lines than
     the max, the last known value is carried forward.
     
     FIXME: Current implementation repeats the entire row data changing only 
@@ -179,9 +179,9 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
 
     # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
     # TODO: Find a way to parse Unit/Credit/Lec/Lab for sub-columning
+    extracted = []
     if header_dets:
         header_box = header_dets[0].bbox
-        extracted = []
         for col in columns:
             header_cell = bbox_intersection(header_box, col.bbox)
             extracted.append(ocr_crop(detector.image, header_cell).strip())
@@ -194,7 +194,12 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         ]
         header_names = clean
 
-    logger.info("Extracted %d rows × %d columns", len(rows), n_cols)
+    logger.info(
+        "Extracted %d ouput rows (from %d detected rows) × %d columns", 
+        len(rows_as_dicts), 
+        len(rows),
+        n_cols
+    )
     return TableData(
         headers=header_names,
         rows=rows_as_dicts,
