@@ -1,7 +1,6 @@
 """Utility functions for image processing and OCR."""
 
 from __future__ import annotations
-import re
 from typing import Optional
 from PIL import Image
 import pytesseract
@@ -28,6 +27,4 @@ def ocr_crop(image: Image.Image, box: list[int]) -> str:
     """Crop image to box and run Tesseract OCR."""
 
     crop = image.crop(tuple(box))
-    raw_text = pytesseract.image_to_string(crop, config=TESSERACT_CONFIG)
-    # Flatten OCR output so JSON values do not contain embedded newlines.
-    return re.sub(r"\s+", " ", raw_text).strip()
+    return  pytesseract.image_to_string(crop, config=TESSERACT_CONFIG)
