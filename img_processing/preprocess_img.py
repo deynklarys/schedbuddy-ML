@@ -306,7 +306,14 @@ def correct_perspective_distortion(
         Perspective-corrected BGR image, or the input image if no distortion
         was detected or no valid contour was found.
     """
-    # NEW function (Phase 0-B)
+    if metrics.get("crop_applied", 0.0) == 0.0:
+        logger.debug(
+            "Perspective correction (0-B): skipping — 0-A did not find a valid "
+            "document contour; warping without an anchor would cause harm."
+        )
+        metrics["perspective_corrected"] = 0.0
+        return bgr
+
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY) if bgr.ndim == 3 else bgr.copy()
     h, w = gray.shape[:2]
     total_area = float(h * w)
