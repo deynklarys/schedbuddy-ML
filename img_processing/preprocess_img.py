@@ -209,8 +209,22 @@ def normalise_document_framing(
     _, thresh_raw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thresh: np.ndarray = np.asarray(thresh_raw)
 
-    # If background is predominantly light, invert so the document is white
-    if float(np.mean(thresh)) > 127.0:
+    # Invert only if the image centre is darker than the border
+    margin = max(1, min(h, w) // 8)
+    border_mean = float(
+        np.mean(
+            np.concatenate(
+                [
+                    blurred[:margin, :].ravel(),
+                    blurred[h - margin :, :].ravel(),
+                    blurred[:, :margin].ravel(),
+                    blurred[:, w - margin :].ravel(),
+                ]
+            )
+        )
+    )
+    centre_mean = float(np.mean(blurred[h // 4 : 3 * h // 4, w // 4 : 3 * w // 4]))
+    if centre_mean < border_mean:
         thresh = cv2.bitwise_not(thresh)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -300,7 +314,22 @@ def correct_perspective_distortion(
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     _, thresh_raw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thresh: np.ndarray = np.asarray(thresh_raw)
-    if float(np.mean(thresh)) > 127.0:
+    # Invert only if the image centre is darker than the border (document is light on dark bg)
+    margin = max(1, min(h, w) // 8)
+    border_mean = float(
+        np.mean(
+            np.concatenate(
+                [
+                    blurred[:margin, :].ravel(),
+                    blurred[h - margin :, :].ravel(),
+                    blurred[:, :margin].ravel(),
+                    blurred[:, w - margin :].ravel(),
+                ]
+            )
+        )
+    )
+    centre_mean = float(np.mean(blurred[h // 4 : 3 * h // 4, w // 4 : 3 * w // 4]))
+    if centre_mean < border_mean:
         thresh = cv2.bitwise_not(thresh)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
