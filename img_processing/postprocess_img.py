@@ -3,8 +3,8 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-image_file = "./raw_samples/5ef068b5-113_table_1(input).jpg"
-# image_file = "./raw_samples/87ef5a9f-25_table_1(input1).jpg"
+# image_file = "./raw_samples/5ef068b5-113_table_1(input).jpg"
+image_file = "./raw_samples/87ef5a9f-25_table_1(input1).jpg"
 # image_file = "./raw_samples/32c2ea01-196_table_1(input2).jpg"
 # image_file = "./raw_samples/8c5da3c8-105_table_1(input3).jpg"
 img = cv2.imread(image_file)
@@ -53,12 +53,12 @@ def grayscale(image):
 
 
 greyed = grayscale(img)
-cv2.imwrite("temp/grey.jpg", greyed)
+cv2.imwrite("temp/greyed.jpg", greyed)
 
-display("temp/grey.jpg")
+display("temp/greyed.jpg")
 
 # %%
-thresh, im_bw = cv2.threshold(grey, 210, 230, cv2.THRESH_BINARY)
+thresh, im_bw = cv2.threshold(greyed, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 cv2.imwrite("temp/bw_image.jpg", im_bw)
 
 display("temp/bw_image.jpg")
@@ -87,7 +87,7 @@ cv2.imwrite("temp/quiet.jpg", quiet)
 display("temp/quiet.jpg")
 
 
-# %% Dilation & Erosion
+# %% Erosion
 def thin_font(image):
     image = cv2.bitwise_not(image)
     kernel = np.ones((2, 2), np.uint8)
@@ -102,6 +102,7 @@ cv2.imwrite("temp/eroded_image.jpg", eroded_image)
 display("temp/eroded_image.jpg")
 
 
+# %% Dilation
 def thick_font(image):
     image = cv2.bitwise_not(image)
     kernel = np.ones((2, 2), np.uint8)
@@ -113,10 +114,12 @@ def thick_font(image):
 dilated_image = thick_font(quiet)
 cv2.imwrite("temp/dilated_image.jpg", dilated_image)
 
+display("temp/dilated_image.jpg")
+
 # %% Automatic deskewing
 # https://becominghuman.ai/how-to-automatically-deskew-straighten-a-text-image-using-opencv-a0c30aed83df
 skewed = cv2.imread(image_file)
-display(skewed)
+display(image_file)
 
 
 # %% Use only on skewed images
@@ -176,5 +179,3 @@ fixed = deskew(skewed)
 cv2.imwrite("temp/deskewed.jpg", fixed)
 
 display("temp/deskewed.jpg")
-
-# %%
