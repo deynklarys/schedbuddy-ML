@@ -36,7 +36,8 @@ def display(im_path):
 
     plt.show()
 
-    display(image_file)
+
+display(image_file)
 
 
 # %% Inversion
