@@ -886,6 +886,8 @@ def preprocess_schedule_image(
     # Step 0-B: Flatness correction (perspective / warp rectification)
     bgr = correct_perspective_distortion(bgr, config, metrics)
 
+    # TEMPORARY DEBUG — remove after inspection
+    cv2.imwrite("processed/sample5_after_0B.png", bgr)
     # Step 0-C: Portrait orientation enforcement
     # NOTE: coarse rotation detection happens ONLY here; the duplicate
     # check_approx_roatation / apply_approx_reorientation calls that
@@ -1033,6 +1035,7 @@ def _finalize_metrics(
 #     Called after an early Phase 1 rejection to ensure the output
 #     ``quality_metrics`` dictionary always contains the minimum required keys.
 
+
 #     Args:
 #         gray: Greyscale image array.
 #         bgr: Colour image array (reserved for future metrics).
@@ -1052,15 +1055,21 @@ def _finalize_metrics(
 
 
 def _detect_coarse_orientation(gray: np.ndarray) -> int:
-    """Detect coarse 90°-multiple rotation using projection profile variance.
+    """Detect coarse 90°-multiple rotation using document structure.
 
-    Binarises the image with Otsu's method and measures the row-wise
-    projection variance at 0°, 90°, 180°, and 270°.  Text lines create
-    alternating light/dark bands across rows, so the highest row-wise
-    variance indicates the correct upright orientation.
+    Exploits two invariants of correctly-oriented schedule crops:
+    1. The crop should be landscape (width > height).
+    2. The header block (institution name, student info) is always at the top,
+       meaning the top strip should have higher edge density than the bottom.
 
-    Adapted from ``check_approx_roatation`` in ``preprocessor.py``
-    (typo in original function name corrected; now private).
+    Step 1: Rotate to landscape — among the four orientations, keep only the
+    two that produce a landscape result (width > height). If the image is
+    already landscape, candidates are 0° and 180°; if portrait, candidates
+    are 90° and 270°.
+
+    Step 2: Among the two landscape candidates (180° apart), pick the one
+    whose top strip has higher edge density, since the header is always at
+    the top of a correctly oriented crop.
 
     Args:
         gray: Greyscale image (H × W, dtype uint8).
@@ -1069,23 +1078,35 @@ def _detect_coarse_orientation(gray: np.ndarray) -> int:
         Clockwise rotation in degrees needed to correct orientation:
         0, 90, 180, or 270.
     """
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    h, w = gray.shape[:2]
 
-    def _row_variance(img: np.ndarray) -> float:
-        """Return variance of row-wise mean projections."""
-        return float(np.var(img.mean(axis=1)))
+    # Step 1: determine which pair of candidates produce landscape output
+    if w >= h:
+        # Already landscape — candidates are 0° and 180°
+        candidates = {
+            0: gray,
+            180: cv2.rotate(gray, cv2.ROTATE_180),
+        }
+    else:
+        # Portrait — candidates are 90° and 270° (both produce landscape)
+        candidates = {
+            90: cv2.rotate(gray, cv2.ROTATE_90_CLOCKWISE),
+            270: cv2.rotate(gray, cv2.ROTATE_90_COUNTERCLOCKWISE),
+        }
 
-    variances = {
-        0: _row_variance(binary),
-        90: _row_variance(cv2.rotate(binary, cv2.ROTATE_90_CLOCKWISE)),
-        180: _row_variance(cv2.rotate(binary, cv2.ROTATE_180)),
-        270: _row_variance(cv2.rotate(binary, cv2.ROTATE_90_COUNTERCLOCKWISE)),
-    }
+    def _top_edge_density(img: np.ndarray) -> float:
+        """Return edge pixel density in the top 15% of the image."""
+        strip_h = max(1, int(img.shape[0] * 0.15))
+        top_strip = img[:strip_h, :]
+        edges = cv2.Canny(top_strip, 50, 150)
+        return float(edges.mean())
 
-    best_angle = max(variances, key=variances.__getitem__)
+    densities = {k: _top_edge_density(img) for k, img in candidates.items()}
+    best_angle = max(densities, key=densities.__getitem__)
+
     logger.debug(
-        "Coarse orientation: variances=%s → correction=%d°",
-        {k: f"{v:.2f}" for k, v in variances.items()},
+        "Coarse orientation: top-strip edge densities=%s → correction=%d°",
+        {k: f"{v:.2f}" for k, v in densities.items()},
         best_angle,
     )
     return best_angle
@@ -1440,7 +1461,7 @@ if __name__ == "__main__":
     import argparse
 
     logging.basicConfig(
-        level=logging.INFO,
+        level=logging.DEBUG,
         format="%(asctime)s  %(levelname)-7s  %(message)s",
         datefmt="%H:%M:%S",
     )
