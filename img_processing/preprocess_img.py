@@ -209,8 +209,22 @@ def normalise_document_framing(
     _, thresh_raw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thresh: np.ndarray = np.asarray(thresh_raw)
 
-    # If background is predominantly light, invert so the document is white
-    if float(np.mean(thresh)) > 127.0:
+    # Invert only if the image centre is darker than the border
+    margin = max(1, min(h, w) // 8)
+    border_mean = float(
+        np.mean(
+            np.concatenate(
+                [
+                    blurred[:margin, :].ravel(),
+                    blurred[h - margin :, :].ravel(),
+                    blurred[:, :margin].ravel(),
+                    blurred[:, w - margin :].ravel(),
+                ]
+            )
+        )
+    )
+    centre_mean = float(np.mean(blurred[h // 4 : 3 * h // 4, w // 4 : 3 * w // 4]))
+    if centre_mean < border_mean:
         thresh = cv2.bitwise_not(thresh)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -292,7 +306,14 @@ def correct_perspective_distortion(
         Perspective-corrected BGR image, or the input image if no distortion
         was detected or no valid contour was found.
     """
-    # NEW function (Phase 0-B)
+    if metrics.get("crop_applied", 0.0) == 0.0:
+        logger.debug(
+            "Perspective correction (0-B): skipping — 0-A did not find a valid "
+            "document contour; warping without an anchor would cause harm."
+        )
+        metrics["perspective_corrected"] = 0.0
+        return bgr
+
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY) if bgr.ndim == 3 else bgr.copy()
     h, w = gray.shape[:2]
     total_area = float(h * w)
@@ -300,7 +321,22 @@ def correct_perspective_distortion(
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     _, thresh_raw = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     thresh: np.ndarray = np.asarray(thresh_raw)
-    if float(np.mean(thresh)) > 127.0:
+    # Invert only if the image centre is darker than the border (document is light on dark bg)
+    margin = max(1, min(h, w) // 8)
+    border_mean = float(
+        np.mean(
+            np.concatenate(
+                [
+                    blurred[:margin, :].ravel(),
+                    blurred[h - margin :, :].ravel(),
+                    blurred[:, :margin].ravel(),
+                    blurred[:, w - margin :].ravel(),
+                ]
+            )
+        )
+    )
+    centre_mean = float(np.mean(blurred[h // 4 : 3 * h // 4, w // 4 : 3 * w // 4]))
+    if centre_mean < border_mean:
         thresh = cv2.bitwise_not(thresh)
 
     contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -867,7 +903,7 @@ def preprocess_schedule_image(
     # 1. Resolution
     reason = check_resolution(gray, config, metrics)
     if reason:
-        _fill_missing_metrics(gray, bgr, config, metrics)
+        _finalize_metrics(gray, metrics)
         logger.info("REJECTED (%s): %s", path.name, reason)
         return PreprocessingResult(
             status="rejected",
@@ -879,7 +915,7 @@ def preprocess_schedule_image(
     # 2. Blur
     reason = check_blur(gray, config, metrics)
     if reason:
-        _fill_missing_metrics(gray, bgr, config, metrics)
+        _finalize_metrics(gray, metrics)
         logger.info("REJECTED (%s): %s", path.name, reason)
         return PreprocessingResult(
             status="rejected",
@@ -891,7 +927,7 @@ def preprocess_schedule_image(
     # 3. Brightness
     reason = check_brightness(gray, config, metrics)
     if reason:
-        _fill_missing_metrics(gray, bgr, config, metrics)
+        _finalize_metrics(gray, metrics)
         logger.info("REJECTED (%s): %s", path.name, reason)
         return PreprocessingResult(
             status="rejected",
@@ -903,7 +939,7 @@ def preprocess_schedule_image(
     # 4. Border completeness
     reason = check_border_completeness(gray, config, metrics)
     if reason:
-        _fill_missing_metrics(gray, bgr, config, metrics)
+        _finalize_metrics(gray, metrics)
         logger.info("REJECTED (%s): %s", path.name, reason)
         return PreprocessingResult(
             status="rejected",
@@ -954,33 +990,65 @@ def preprocess_schedule_image(
 # ===========================================================================
 
 
-def _fill_missing_metrics(
+def _finalize_metrics(
     gray: np.ndarray,
-    bgr: np.ndarray,
-    config: PreprocessingConfig,
     metrics: Dict[str, float],
 ) -> None:
-    """Populate quality metrics that have not yet been computed.
+    """Populate metrics not yet computer after an early Phase 1 fail-fast rejection.
 
-    Called after an early Phase 1 rejection to ensure the output
-    ``quality_metrics`` dictionary always contains the minimum required keys.
+    Cheap metrics (brightness, blur) are computed for real even on rejection.
+    Skew detection is intentionally skipped it is expensive (Canny + Hough transform)
+    and meaningless on rejected images.
+    ``float("nan")`` signals "not computer - an earlier check failed" as opposed to
+    a real measurement of 0.0.
+
+    Phase 0 metrics use ``nan`` rather ``0.0`` for the same reason: if Phase 0
+    somehow did not write them, ``nan`` makes the gap explicit.
 
     Args:
         gray: Greyscale image array.
-        bgr: Colour image array (reserved for future metrics).
-        config: Pipeline configuration.
         metrics: Mutable metrics dictionary to fill in.
     """
-    if "mean_brightness" not in metrics:
-        metrics["mean_brightness"] = float(gray.mean())
-    if "blur_score" not in metrics:
-        metrics["blur_score"] = float(cv2.Laplacian(gray, cv2.CV_64F).var())
-    if "skew_angle_deg" not in metrics:
-        detect_skew_angle(gray, config, metrics)
-    # Phase 0 metrics default to 0.0 if not populated (e.g. very early failure)
-    metrics.setdefault("crop_applied", 0.0)
-    metrics.setdefault("perspective_corrected", 0.0)
-    metrics.setdefault("coarse_rotation_deg", 0.0)
+    # Cheap  - always worth computing even on early rejection
+    metrics.setdefault("mean_brightness", float(gray.mean()))
+    metrics.setdefault("blur_score", float(cv2.Laplacian(gray, cv2.CV_64F).var()))
+
+    # Expensive - nan signals skipped, not computed
+    metrics.setdefault("skew_angle_deg", float("nan"))
+
+    # Phase 0 metrics guard: nan if Phase 0 somehow did not write them
+    metrics.setdefault("crop_applied", float("nan"))
+    metrics.setdefault("perspective_corrected", float("nan"))
+    metrics.setdefault("course_rotation_deg", float("nan"))
+
+
+# def _fill_missing_metrics(
+#     gray: np.ndarray,
+#     bgr: np.ndarray,
+#     config: PreprocessingConfig,
+#     metrics: Dict[str, float],
+# ) -> None:
+#     """Populate quality metrics that have not yet been computed.
+
+#     Called after an early Phase 1 rejection to ensure the output
+#     ``quality_metrics`` dictionary always contains the minimum required keys.
+
+#     Args:
+#         gray: Greyscale image array.
+#         bgr: Colour image array (reserved for future metrics).
+#         config: Pipeline configuration.
+#         metrics: Mutable metrics dictionary to fill in.
+#     """
+#     if "mean_brightness" not in metrics:
+#         metrics["mean_brightness"] = float(gray.mean())
+#     if "blur_score" not in metrics:
+#         metrics["blur_score"] = float(cv2.Laplacian(gray, cv2.CV_64F).var())
+#     if "skew_angle_deg" not in metrics:
+#         detect_skew_angle(gray, config, metrics)
+#     # Phase 0 metrics default to 0.0 if not populated (e.g. very early failure)
+#     metrics.setdefault("crop_applied", 0.0)
+#     metrics.setdefault("perspective_corrected", 0.0)
+#     metrics.setdefault("coarse_rotation_deg", 0.0)
 
 
 def _detect_coarse_orientation(gray: np.ndarray) -> int:
