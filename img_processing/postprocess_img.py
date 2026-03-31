@@ -4,9 +4,9 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 # image_file = "./raw_samples/5ef068b5-113_table_1(input).jpg"
-image_file = "./raw_samples/87ef5a9f-25_table_1(input1).jpg"
+# image_file = "./raw_samples/87ef5a9f-25_table_1(input1).jpg"
 # image_file = "./raw_samples/32c2ea01-196_table_1(input2).jpg"
-# image_file = "./raw_samples/8c5da3c8-105_table_1(input3).jpg"
+image_file = "./raw_samples/8c5da3c8-105_table_1(input3).jpg"
 img = cv2.imread(image_file)
 print(f"Setup complete. Image file = {image_file}")
 
