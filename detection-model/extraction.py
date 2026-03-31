@@ -7,6 +7,7 @@ import re
 
 from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
+from match_header import match_header
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +185,10 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         header_box = header_dets[0].bbox
         for col in columns:
             header_cell = bbox_intersection(header_box, col.bbox)
-            extracted.append(ocr_crop(detector.image, header_cell).strip())
+            extracted_text = ocr_crop(detector.image, header_cell).strip()
+            # extracted_text, score = match_header(extracted_text, 50)
+            # logger.info(f"Match: {extracted_text} : {score}")
+            extracted.append(extracted_text)
 
     if any(extracted):
         clean = [t or f"col_{i + 1}" for i, t in enumerate(extracted)]
