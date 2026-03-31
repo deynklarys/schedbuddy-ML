@@ -3,6 +3,8 @@
 from __future__ import annotations
 import json
 import logging
+import argparse
+import os
 from pathlib import Path
 from dataclasses import asdict
 
@@ -15,14 +17,15 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
 @log_time
-def main() -> None:
+def main(input_path: str = "") -> None:
     base_dir = Path(__file__).resolve().parent
-    IMAGE_PATH = base_dir / "test-images/5ef068b5-113_table_1.jpg"
+    image_path = base_dir / "test-images" / input_path
     OUTPUT_IMAGE = base_dir / "output.png"
     DETECTIONS_JSON = base_dir / "detections.json"
-    TABLE_JSON = base_dir / "extracted_table.json"
+    input_path_wo_ext = os.path.splitext(input_path)[0]
+    TABLE_JSON = base_dir / f"extracted-data/extracted_{input_path_wo_ext}.json"
 
-    detector = BorderlessTableDetector(IMAGE_PATH, OUTPUT_IMAGE)
+    detector = BorderlessTableDetector(image_path, OUTPUT_IMAGE)
 
     # Run structure recognition
     detections, _ = detector.process(
@@ -42,7 +45,7 @@ def main() -> None:
     Path(TABLE_JSON).write_text(
         json.dumps(
             {
-                "image file:": str(IMAGE_PATH),
+                "image file:": str(image_path),
                 "ocr configuration:": TESSERACT_CONFIG,
                 "headers": table_data.headers,
                 "rows": table_data.rows,
@@ -61,4 +64,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Run detection model")
+    parser.add_argument("--image", default="", help="Path to test images (test-images/)")
+    args = parser.parse_args()
+    main(input_path=args.image)
