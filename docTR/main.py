@@ -1,8 +1,14 @@
 # %% Imports
+import matplotlib
+
+matplotlib.use("TkAgg")  # This tells Python to open a separate window
 import json
 
+import matplotlib.pyplot as plt
 from doctr.io import DocumentFile
 from doctr.models import ocr_predictor
+from doctr.utils.reconstitution import synthesize_page
+from doctr.utils.visualization import visualize_page
 
 print("Imports ready.")
 # %% Image paths
@@ -24,25 +30,24 @@ result = model(imageFile)
 result_json = result.export()
 print(json.dumps(result_json, indent=4))
 
-# %% Manual Visualization (Fixed)
-import matplotlib.pyplot as plt
-from doctr.utils.reconstitution import synthesize_page
+# %% Manual Visualization
+# 1. Turn on Interactive Mode BEFORE starting
+plt.ion()
 
-# 1. Correct the imports (They live in different places now)
-from doctr.utils.visualization import visualize_page
-
-# 2. Iterate through the results manually
-for page in result.pages:
-    # A. The Overlay (Boxes on Image)
-    # We pass the exported data and the actual image array
+for i, page in enumerate(result.pages):
+    # A. The Overlay
+    # Creating a unique figure number ensures windows don't overwrite each other
+    plt.figure(i * 2)
     visualize_page(page.export(), page.page, interactive=True)
-    plt.title("OCR Overlay")
-    plt.show()
+    plt.title(f"Page {i} - OCR Overlay")
 
-    # B. The Reconstitution (Text on White Page)
-    # We pass the exported data to rebuild the page from scratch
+    # B. The Reconstitution
+    plt.figure(i * 2 + 1)
     synth_img = synthesize_page(page.export(), draw_proba=True)
     plt.imshow(synth_img)
     plt.axis("off")
-    plt.title("Reconstructed Text")
-    plt.show()
+    plt.title(f"Page {i} - Reconstructed")
+
+# 2. This is the "Breath" that prevents the freeze
+# It tells Python to run the GUI event loop for a moment
+plt.show(block=True)
