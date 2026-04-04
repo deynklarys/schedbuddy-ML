@@ -3,6 +3,7 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Optional
+from datetime import time
 
 
 @dataclass
@@ -27,3 +28,10 @@ class TableData:
     headers: list[str]
     rows: list[dict[str, str]]
     cells: list[dict]
+
+@dataclass
+class TimeData:
+    start: time
+    end: time
+    start_mins: int
+    end_mins: int

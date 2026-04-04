@@ -1,14 +1,6 @@
-import re
-from datetime import datetime, time as _Time
-from dataclasses import dataclass
+from datetime import datetime
 
-@dataclass
-class TimeData:
-    start: _Time
-    end: _Time
-    start_mins: int
-    end_mins: int
-
+from models import TimeData 
 
 def parse_time(time_str):
     parts = [part.strip() for part in time_str.split("-")]
