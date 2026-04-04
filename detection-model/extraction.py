@@ -7,8 +7,7 @@ import re
 
 from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
-from match_header import match_header
-from match_course import match_course
+from match_text import match_header, match_course
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +180,14 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         
         rows_as_dicts.extend(expanded)
 
+    # After the entire extraction loop, before header renaming
+    for row in rows_as_dicts:
+        if header_names[0] == "col1": 
+            matched_code, score, subject = match_course(row["col1"], min_score=50)
+            logger.info(f"Col1 fuzzy match: {row['col1']} → {matched_code} (score: {score})")
+            row["col1"] = matched_code
+            row["col2"] = subject
+            
     # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
     # TODO: Find a way to parse Unit/Credit/Lec/Lab for sub-columning
     extracted = []
