@@ -8,6 +8,7 @@ import re
 from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
 from match_header import match_header
+from match_course import match_course
 
 logger = logging.getLogger(__name__)
 
@@ -154,28 +155,30 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
     cell_records: list[CellRecord] = []
     rows_as_dicts: list[dict] = []
 
-    for r_idx, row in enumerate(rows, 1):
-        row_dict: dict[str, str] = {}
+    data_rows = rows[1:] if len(rows) > 1 else []
+
+    for r_idx, row in enumerate(data_rows, 1):
+        col_dict: dict[str, str] = {}
+        units_dict: dict[str, float] = {}
+        
         for c_idx, col in enumerate(columns, 1):
             box = bbox_intersection(row.bbox, col.bbox)
             text = ocr_crop(detector.image, box) if box else ""
             col_name = header_names[c_idx - 1]
-
-            if "col3" in col_name:
-                row_dict[col_name] = parse_units_cell(text)
-            else:
-                row_dict[col_name] = text
-
+    
             cell_records.append(CellRecord(row=r_idx, column=c_idx, bbox=box, text=text))
+    
+            # Separate units column handling
+            if "col3" in col_name:
+                units_dict = parse_units_cell(text)
+            else:
+                col_dict[col_name] = text
         
-        units = row_dict.pop("col3")
-
-        # Expand multiline columns with carry-forward
-        expanded = expand_multiline_rows(row_dict)
-
+        expanded = expand_multiline_rows(col_dict)
+        
         for entry in expanded:
-            entry["col3"] = units
-
+            entry["col3"] = units_dict
+        
         rows_as_dicts.extend(expanded)
 
     # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
@@ -186,8 +189,8 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         for col in columns:
             header_cell = bbox_intersection(header_box, col.bbox)
             extracted_text = ocr_crop(detector.image, header_cell).strip()
-            # extracted_text, score = match_header(extracted_text, 50)
-            # logger.info(f"Match: {extracted_text} : {score}")
+            extracted_text, score = match_header(extracted_text, 50)
+            logger.info(f"Match: {extracted_text} : {score}")
             extracted.append(extracted_text)
 
     if any(extracted):
@@ -201,7 +204,7 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
     logger.info(
         "Extracted %d ouput rows (from %d detected rows) × %d columns", 
         len(rows_as_dicts), 
-        len(rows),
+        len(data_rows),
         n_cols
     )
     return TableData(
