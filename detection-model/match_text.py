@@ -20,7 +20,7 @@ def match_header(extracted_text, min_score=0):
 
 def match_course(extracted_text, min_score=0):
 
-    with open('database.json', 'r', encoding='utf-8') as f:
+    with open('databases/comsci.json', 'r', encoding='utf-8') as f:
         db_dict = json.load(f)
     
     # -1 score in case no matches
