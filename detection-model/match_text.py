@@ -12,7 +12,7 @@ def match_header(extracted_text, min_score=0):
 
     for name in HEADER_NAMES:
         # try other methods
-        score = max(fuzz.partial_ratio(extracted_text, code), fuzz.ratio(extracted_text, code))
+        score = max(fuzz.partial_ratio(extracted_text, name), fuzz.ratio(extracted_text, name))
         if (score > min_score) & (score > max_score):
             max_name = name
             max_score = score
