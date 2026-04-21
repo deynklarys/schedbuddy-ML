@@ -9,6 +9,7 @@ from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
 from match_text import match_header, match_course
 from parse_time import parse_time
+from normalize_days import normalize_days
 
 logger = logging.getLogger(__name__)
 
@@ -190,6 +191,12 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
                     ]
                 except ValueError:
                     logger.warning("Skipping unparseable time value: %s", entry["col6"])
+
+            if "col5" in entry and entry["col5"].strip():
+                try:
+                    entry["col5"] = normalize_days(entry["col5"])
+                except ValueError:
+                    logger.warning("Skipping unparseable days value: %s", entry["col5"])
         
         rows_as_dicts.extend(expanded)
 
