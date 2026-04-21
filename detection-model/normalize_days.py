@@ -42,3 +42,17 @@ def normalize_days(days_string: str) -> list[str]:
 
     return result
 
+if __name__ == "__main__":
+    test_cases = [
+        ("MWF", ["monday", "wednesday", "friday"]),
+        ("TTh", ["tuesday", "thursday"]),
+        ("MTThF", ["monday", "tuesday", "thursday", "friday"]),
+        ("SaSu", ["saturday", "sunday"]),
+        ("MThF", ["monday", "thursday", "friday"]),
+        ("TThSaSu", ["tuesday", "thursday", "saturday", "sunday"]),
+    ]
+
+    for input_str, expected in test_cases:
+        output = normalize_days(input_str)
+        assert output == expected, f"Test failed for '{input_str}': expected {expected}, got {output}"
+    print("All tests passed!")
