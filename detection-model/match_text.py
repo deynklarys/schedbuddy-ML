@@ -1,7 +1,7 @@
 from rapidfuzz import fuzz, process
 import json
 
-HEADER_NAMES = ["Code", "Subject", "Units", "Class", "Days", "Time", "Room", "Faculty"]
+HEADER_NAMES = ["code", "subject", "units", "class", "days", "time", "room", "faculty"]
 
 def match_header(extracted_text, min_score=0):
     # -1 score in case no matches
