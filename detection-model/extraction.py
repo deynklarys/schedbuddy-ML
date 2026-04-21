@@ -8,6 +8,7 @@ import re
 from models import Detection, CellRecord, TableData
 from utils import bbox_intersection, ocr_crop
 from match_text import match_header, match_course
+from parse_time import parse_time
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +178,18 @@ def extract_table(detector, detections: list[Detection]) -> TableData:
         
         for entry in expanded:
             entry["col3"] = units_dict
+
+            if "col6" in entry and entry["col6"].strip():
+                try:
+                    time_data = parse_time(entry["col6"])
+                    entry["col6"] = [
+                        {
+                            "start": time_data.start_mins,
+                            "end": time_data.end_mins
+                        }
+                    ]
+                except ValueError:
+                    logger.warning("Skipping unparseable time value: %s", entry["col6"])
         
         rows_as_dicts.extend(expanded)
 

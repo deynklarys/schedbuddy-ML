@@ -30,4 +30,5 @@ if __name__ == "__main__":
     for time in time_samples:
         time_data = parse_time(time)
         print(f"Time (24-hour): {time_data.start} - {time_data.end}")
+        print(f"Time (minutes): {time_data.start_mins} - {time_data.end_mins}")
         print(f"Duration: {time_data.end_mins - time_data.start_mins}")
