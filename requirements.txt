@@ -8,3 +8,10 @@ numpy>=1.21.0
 
 # Configuration and utilities
 pyyaml>=6.0
+
+# Table Structure Recognition model
+git+https://github.com/huggingface/transformers.git
+timm
+matplotlib
+Pillow
+pytesseract
