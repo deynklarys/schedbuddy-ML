@@ -10,8 +10,8 @@
 
 TODO.md
 
-model/data
-model/runs
+table_detection/data
+table_detection/runs
 table-schedule
 extracted-data
 detections.json
