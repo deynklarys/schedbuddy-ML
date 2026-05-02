@@ -42,9 +42,9 @@ EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path_wo_ext}.json"
 # Enhance image quality
 
 # -----------------------------------------------------------------------------
-# Stage 2: Table Detection
+# Stage 2: Table Detection and Cropping
 # -----------------------------------------------------------------------------
-
+# TODO: improve error handling, might be better to wrap in a function and use try/except
 model = YOLO("table_detection/runs/detect/train/weights/best.pt")
 
 # Run inference
@@ -57,3 +57,68 @@ results = model.predict(
     exist_ok=True)
 
 results[0].save(TABLE_OUTPUT)
+
+
+# Crop table based on label
+image_path = TABLE_OUTPUT
+image = cv2.imread(str(image_path))
+if image is None:
+    print(f"Skipped unreadable image: {image_path}")
+    exit(1)
+
+if not LABEL_PATH.exists():
+    print(f"Skipped (no label file): {LABEL_PATH}")
+    exit(1)
+
+height, width = image.shape[:2]
+with LABEL_PATH.open("r", encoding="utf-8") as file:
+    lines = [line.strip() for line in file if line.strip()]
+
+table_class_id = 0
+padding = 2
+
+if lines[0]:
+    parts = lines[0].split()
+    if len(parts) < 5:
+        logger.warning(f"Invalid label format in {LABEL_PATH}: {lines[0]}")
+        exit(1)
+
+    cls_id = int(float(parts[0]))
+    if cls_id != table_class_id:
+        logger.warning(f"Invalid class ID in {LABEL_PATH}: {cls_id}")
+        exit(1)
+
+    x_center_n, y_center_n, box_width_n, box_height_n = map(float, parts[1:5])
+
+    box_width = box_width_n * width
+    box_height = box_height_n * height
+    x_center = x_center_n * width
+    y_center = y_center_n * height
+
+    x1 = int(round(x_center - box_width / 2))
+    y1 = int(round(y_center - box_height / 2))
+    x2 = int(round(x_center + box_width / 2))
+    y2 = int(round(y_center + box_height / 2))
+
+    x1 -= padding
+    y1 -= padding
+    x2 += padding
+    y2 += padding
+
+    x1 = max(0, min(x1, image.shape[1]))
+    x2 = max(0, min(x2, image.shape[1]))
+    y1 = max(0, min(y1, image.shape[0]))
+    y2 = max(0, min(y2, image.shape[0]))
+    if x2 <= x1 or y2 <= y1:
+        logger.warning(f"Invalid bounding box for {image_path}: ({x1}, {y1}, {x2}, {y2})")
+        exit(1)
+
+    cropped = image[y1:y2, x1:x2]
+    if cropped.size == 0:
+        logger.warning(f"Invalid cropped image for {image_path}: ({x1}, {y1}, {x2}, {y2})")
+        exit(1)
+
+    output_path = OUTPUT_DIR / f"{img_path_wo_ext}_table{img_path.suffix}"
+    cv2.imwrite(str(output_path), cropped)
+    logger.info(f"Saved: {output_path}")
+
