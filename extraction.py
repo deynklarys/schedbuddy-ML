@@ -8,10 +8,10 @@ from typing import Any
 
 from rapidfuzz import fuzz
 
-from .column_handlers import ColumnHandler, get_handler
-from .course_db import CourseDatabase
-from .models import CellRecord, Detection, TableData
-from .utils import bbox_intersection, ocr_crop
+from column_handlers import ColumnHandler, get_handler
+from course_db import CourseDatabase
+from models import CellRecord, Detection, TableData
+from utils import bbox_intersection, ocr_crop
 
 logger = logging.getLogger(__name__)
 

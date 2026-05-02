@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 from ultralytics import YOLO
 
-from structure_detection.config import TESSERACT_CONFIG
-from structure_detection.detector import BorderlessTableDetector
-from structure_detection.extraction import extract_table
+from config import TESSERACT_CONFIG
+from detector import BorderlessTableDetector
+from extraction import extract_table
 
 
 # Modify as needed
