@@ -1,241 +1,237 @@
 """Table data extraction and OCR workflow."""
 
 from __future__ import annotations
+
 import logging
 from dataclasses import asdict
-import re
+from typing import Any
 
-from models import Detection, CellRecord, TableData
+from rapidfuzz import fuzz
+
+from column_handlers import ColumnHandler, get_handler
+from course_db import CourseDatabase
+from models import CellRecord, Detection, TableData
 from utils import bbox_intersection, ocr_crop
-from match_text import match_header, match_course
-from parse_time import parse_time
-from normalize_days import normalize_days
 
 logger = logging.getLogger(__name__)
 
-def parse_units_cell(text: str) -> dict[str, float]:
-    """
-    Parse OCR text for units into numeric Credit/Lec/Lab values.
+HEADER_NAMES = ["code", "subject", "units", "class", "days", "time", "room", "faculty"]
 
-    Expected format is similar to "3.0 2.0 1.0". Comma decimals from noisy OCR
-    (for example "3,0 2,0 1,0") are normalized to periods.
+# Default course database
+default_course_db: CourseDatabase = CourseDatabase.from_dir("databases")
 
-    Returns:
-        Dictionary with keys "Credit", "Lec", and "Lab" as floats.
-        Missing or invalid values default to 0.0.
+# Fuzzy matching
+def _best_fuzzy_match(
+    query: str,
+    candidates: list[str],
+    min_score: int = 0,
+) -> tuple[str, int]:
+    best_name, best_score = query, -1
+    for candidate in candidates:
+        score = max(
+            fuzz.partial_ratio(query, candidate),
+            fuzz.ratio(query, candidate),
+        )
+        if score > min_score and score > best_score:
+            best_name, best_score = candidate, score
+    return best_name, best_score
 
-    TODO: Parse extracted text and use it as subheader names.
-    FIXME: Current implementation uses hardcoded subcolumns. 
-    """
-    sub_columns = ("credit", "lec", "lab")
-    units = re.findall(r"\d+(?:\.\d+)?", text.replace(",", "."))
-    default = dict.fromkeys(sub_columns, 0.0)
-    default.update(zip(sub_columns, map(float, units)))
-    return default
+def match_header(extracted_text: str, min_score: int = 0) -> tuple[str, int]:
+    return _best_fuzzy_match(extracted_text, HEADER_NAMES, min_score)
 
-def expand_multiline_rows(row: dict[str, str]) -> list[dict[str, str]]:
-    """
-    Expand rows with with multiline values separated by newline into 
-    per-schedule-entry dicts. If a column has fewer lines than
-    the max, the last known value is carried forward.
-    
-    FIXME: Current implementation repeats the entire row data changing only 
-    the values on multiline columns.
+def match_course(
+    extracted_text: str,
+    min_score: int = 0,
+    db: CourseDatabase | None = None,
+) -> tuple[str, int, str]:
+    return (db or default_course_db).match(extracted_text, min_score)
 
-    Current output:
-        {
-            "Code": "code",
-            "Subject": "subject",
-            "Units\nCredit Lee Lab": {
-                "Credit": 3.0,
-                "Lec": 2.0,
-                "Lab": 1.0
-            },
-            "Class": "class",
-            "Days": "TTh",
-            "Time": "04:00 PM - 07:00 PM",
-            "Room": "CS-02-104",
-            "Faculty": "faculty"
-            },
-            {
-            "Code": "code",
-            "Subject": "subject",
-            "Units\nCredit Lee Lab": {
-                "Credit": 3.0,
-                "Lec": 2.0,
-                "Lab": 1.0
-            },
-            "Class": "class",
-            "Days": "T",
-            "Time": "10:00 AM - 12:00 PM",
-            "Room": "CS-02-104",
-            "Faculty": "faculty"
-        }
-    Goal output:
-        {
-            "Code": "code",
-            "Subject": "subject",
-            "Units": {
-                "Credit": 3.0,
-                "Lec": 2.0,
-                "Lab": 1.0
-            },
-            "Class": "BSCS-3A",
-            "Schedules": [
-                {
-                    "Days": "day",
-                    "Time": "01:00 PM - 04:00 PM",
-                    "Room": "CS-02-201 CS-02-105",
-                    "Faculty": "class"
-                },
-                {
-                    "Days": "day",
-                    "Time": "01:00 PM - 04:00 PM",
-                    "Room": "CS-02-201 CS-02-105",
-                    "Faculty": "class"
-                }
-            ]
-        }
-    """
+# Header OCR  (runs first, before any data extraction)
+def _resolve_column_handlers(
+    detector,
+    columns: list,
+    header_dets: list,
+) -> tuple[list[str], list[ColumnHandler]]:
 
-    split_rows = {
-        col: [line.strip() for line in val.split("\n") if line.strip()]
-        for col, val in row.items()
-    }
+    n_cols = len(columns)
 
-    max_lines = max(len(lines) for lines in split_rows.values())
+    if not header_dets:
+        names    = [f"col_{i + 1}" for i in range(n_cols)]
+        handlers = [get_handler(name) for name in names]
+        return names, handlers
 
-    entries = []
-    last_entry = {} # carry forward the last non-empty value per column
+    header_box = header_dets[0].bbox
+    names:    list[str]           = []
+    handlers: list[ColumnHandler] = []
 
-    for i in range(max_lines):
-        entry = {}
-        for col, lines in split_rows.items():
-            if i < len(lines):
-                entry[col] = lines[i]
-                last_entry[col] = lines[i]
-            else: 
-                entry[col] = last_entry.get(col, "")
-        
-        entries.append(entry)
+    for col in columns:
+        cell = bbox_intersection(header_box, col.bbox)
+        raw  = ocr_crop(detector.image, cell).strip() if cell else ""
 
-    return entries
+        canonical, score = match_header(raw, min_score=70)
+        logger.info("Header match: %r → %r (score: %d)", raw, canonical, score)
 
-def extract_table(detector, detections: list[Detection]) -> TableData:
-    """Extract structured table data from structure-model detections via OCR.
-    
-    Args:
-        detector: BorderlessTableDetector instance with loaded image
-        detections: output of process() with model_type="structure"
-    
-    Returns:
-        TableData with headers, rows, and individual cell records
+        handler = get_handler(canonical)
+        handler.configure(raw)
 
-    FIXME: "Units" is hardcoded. Improve column checking for passing units cell text
-    """
+        names.append(canonical)
+        handlers.append(handler)
+
+    return names, handlers
+
+
+def _expand_multiline_rows(
+    row: dict[str, Any],
+    schedule_fields: set[str],
+) -> list[dict[str, Any]]:
+
+    schedule_lines: dict[str, list[str]] = {}
+    shared: dict[str, Any] = {}
+
+    for col, val in row.items():
+        if col in schedule_fields and isinstance(val, str):
+            schedule_lines[col] = [ln.strip() for ln in val.split("\n") if ln.strip()]
+        else:
+            shared[col] = val
+
+    if not schedule_lines:
+        return [{**shared, "schedules": []}]
+
+    max_slots = max(len(lines) for lines in schedule_lines.values())
+    last: dict[str, str] = {}
+    schedules: list[dict[str, Any]] = []
+
+    for i in range(max_slots):
+        slot: dict[str, Any] = {}
+        for col, lines in schedule_lines.items():
+            value     = lines[i] if i < len(lines) else last.get(col, "")
+            last[col] = value
+            slot[col] = value
+        schedules.append(slot)
+
+    return [{**shared, "schedules": schedules}]
+
+
+def extract_table(
+    detector,
+    detections: list[Detection],
+    db: CourseDatabase | None = None,
+) -> TableData:
 
     if detector.image is None:
         raise RuntimeError("Call process() before extract_table().")
 
     rows = sorted(
         [d for d in detections if "row" in d.label.lower()],
-        key=lambda d: d.bbox[1]  # sort by ymin
+        key=lambda d: d.bbox[1],
     )
-
     columns = sorted(
         [d for d in detections if d.label.lower() == "table column"],
-        key=lambda d: d.bbox[0]  # sort by xmin
+        key=lambda d: d.bbox[0],
     )
-
     header_dets = [d for d in detections if "header" in d.label.lower()]
 
-    n_cols = len(columns)
-    header_names = [f"col{i + 1}" for i in range(n_cols)]
+    # 1. Header OCR first so handlers are configured before data rows
+    header_names, handlers = _resolve_column_handlers(detector, columns, header_dets)
+    schedule_fields = {
+        name for name, h in zip(header_names, handlers) if h.is_schedule_field
+    }
 
-    # Build cell grid
-    cell_records: list[CellRecord] = []
-    rows_as_dicts: list[dict] = []
-
+    # 2. Cell extraction
+    cell_records:  list[CellRecord] = []
+    rows_as_dicts: list[dict]       = []
     data_rows = rows[1:] if len(rows) > 1 else []
 
     for r_idx, row in enumerate(data_rows, 1):
-        col_dict: dict[str, str] = {}
-        units_dict: dict[str, float] = {}
-        
-        for c_idx, col in enumerate(columns, 1):
-            box = bbox_intersection(row.bbox, col.bbox)
+        raw_cells:    dict[str, str] = {}
+        parsed_cells: dict[str, Any] = {}
+
+        for c_idx, (col, name, handler) in enumerate(
+            zip(columns, header_names, handlers), 1
+        ):
+            box  = bbox_intersection(row.bbox, col.bbox)
             text = ocr_crop(detector.image, box) if box else ""
-            col_name = header_names[c_idx - 1]
-    
+
             cell_records.append(CellRecord(row=r_idx, column=c_idx, bbox=box, text=text))
-    
-            # Separate units column handling
-            if "col3" in col_name:
-                units_dict = parse_units_cell(text)
+
+            if handler.is_schedule_field:
+                raw_cells[name] = text
             else:
-                col_dict[col_name] = text
-        
-        expanded = expand_multiline_rows(col_dict)
-        
+                try:
+                    parsed_cells[name] = handler.parse_cell(text)
+                except (ValueError, KeyError):
+                    logger.warning(
+                        "Handler %s failed on %r (row %d, col %s); raw text = %r. Sending empty string.",
+                        type(handler).__name__, text, r_idx, name, text,
+                    )
+                    parsed_cells[name] = ""
+
+        expanded = _expand_multiline_rows(
+            {**parsed_cells, **raw_cells},
+            schedule_fields,
+        )
+
         for entry in expanded:
-            entry["col3"] = units_dict
+            _parse_schedule_slots(entry, header_names, handlers)
 
-            if "col6" in entry and entry["col6"].strip():
-                try:
-                    time_data = parse_time(entry["col6"])
-                    entry["col6"] = [
-                        {
-                            "start": time_data.start_mins,
-                            "end": time_data.end_mins
-                        }
-                    ]
-                except ValueError:
-                    logger.warning("Skipping unparseable time value: %s", entry["col6"])
-
-            if "col5" in entry and entry["col5"].strip():
-                try:
-                    entry["col5"] = normalize_days(entry["col5"])
-                except ValueError:
-                    logger.warning("Skipping unparseable days value: %s", entry["col5"])
-        
         rows_as_dicts.extend(expanded)
 
-    # After the entire extraction loop, before header renaming
-    for row in rows_as_dicts:
-        if header_names[0] == "col1": 
-            matched_code, score, subject = match_course(row["col1"], min_score=50)
-            logger.info(f"Col1 fuzzy match: {row['col1']} → {matched_code} (score: {score})")
-            row["col1"] = matched_code
-            row["col2"] = subject
-            
-    # Temporarily mode  header naming after the data extraction  as too many hardcoding is expected. 
-    # TODO: Find a way to parse Unit/Credit/Lec/Lab for sub-columning
-    extracted = []
-    if header_dets:
-        header_box = header_dets[0].bbox
-        for col in columns:
-            header_cell = bbox_intersection(header_box, col.bbox)
-            extracted_text = ocr_crop(detector.image, header_cell).strip()
-            extracted_text, score = match_header(extracted_text, 50)
-            logger.info(f"Match: {extracted_text} : {score}")
-            extracted.append(extracted_text)
-
-    if any(extracted):
-        clean = [t or f"col_{i + 1}" for i, t in enumerate(extracted)]
-        rows_as_dicts = [
-            {clean[i]: row[header_names[i]] for i in range(n_cols)}
-            for row in rows_as_dicts
-        ]
-        header_names = clean
+    # 3. Post-process: fuzzy-match course codes
+    _apply_course_matching(rows_as_dicts, header_names, db=db)
 
     logger.info(
-        "Extracted %d ouput rows (from %d detected rows) × %d columns", 
-        len(rows_as_dicts), 
-        len(data_rows),
-        n_cols
+        "Extracted %d output rows (from %d detected rows) × %d columns",
+        len(rows_as_dicts), len(data_rows), len(columns),
     )
     return TableData(
         headers=header_names,
         rows=rows_as_dicts,
-        cells=[asdict(c) for c in cell_records]
+        cells=[asdict(c) for c in cell_records],
     )
+
+def _parse_schedule_slots(
+    entry: dict[str, Any],
+    header_names: list[str],
+    handlers: list[ColumnHandler],
+) -> None:
+    handler_map = dict(zip(header_names, handlers))
+    for slot in entry.get("schedules", []):
+        for field, raw in list(slot.items()):
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            handler = handler_map.get(field)
+            if handler is None:
+                continue
+            try:
+                slot[field] = handler.parse_cell(raw)
+            except (ValueError, KeyError):
+                logger.warning(
+                    "Handler %s failed on slot field %r=%r; sending empty string.",
+                    type(handler).__name__, field, raw,
+                )
+                slot[field] = ""
+
+
+def _apply_course_matching(
+    rows: list[dict[str, Any]],
+    header_names: list[str],
+    db: CourseDatabase | None = None,
+) -> None:
+    if not header_names:
+        return
+    code_col = header_names[0]
+    subj_col = header_names[1] if len(header_names) > 1 else None
+
+    for row in rows:
+        raw = row.get(code_col, "")
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        matched_code, score, subject = match_course(raw, min_score=70, db=db)
+        logger.info("Course match: %r → %r (score: %d)", raw, matched_code, score)
+        if score < 70:
+            row[code_col] = ""
+            row[subj_col] = ""
+        else:            
+            row[code_col] = matched_code
+            if subj_col:
+                row[subj_col] = subject
