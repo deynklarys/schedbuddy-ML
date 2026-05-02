@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 
 from ultralytics import YOLO
 
+from structure_detection.detector import BorderlessTableDetector
+
 
 # Modify as needed
 sample_image = "1f4a47d1-242.png"
@@ -122,3 +124,15 @@ if lines[0]:
     cv2.imwrite(str(output_path), cropped)
     logger.info(f"Saved: {output_path}")
 
+# -----------------------------------------------------------------------------
+# Stage 3: Table Structure Detection
+# -----------------------------------------------------------------------------
+detector = BorderlessTableDetector(
+image_path=output_path,
+output_path=STRUCT_OUTPUT
+)
+
+detector.load_image()
+detections, _ = detector.process(
+    model_type="structure", threshold=0.9, show_plot=False, save_plot=True
+)
