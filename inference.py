@@ -1,5 +1,6 @@
 from pathlib import Path
 import os
+import json
 import shutil
 import cv2
 
@@ -9,7 +10,9 @@ logger = logging.getLogger(__name__)
 
 from ultralytics import YOLO
 
+from structure_detection.config import TESSERACT_CONFIG
 from structure_detection.detector import BorderlessTableDetector
+from structure_detection.extraction import extract_table
 
 
 # Modify as needed
@@ -136,3 +139,24 @@ detector.load_image()
 detections, _ = detector.process(
     model_type="structure", threshold=0.9, show_plot=False, save_plot=True
 )
+
+# -----------------------------------------------------------------------------
+# Stage 4: Data Extraction
+# -----------------------------------------------------------------------------
+table_data = extract_table(detector, detections)
+
+output = extract_table(detector, detections)
+Path(EXTRACTED_JSON).write_text(
+    json.dumps(
+        {
+            "image file:": str(image_path),
+            "ocr configuration:": TESSERACT_CONFIG,
+            "headers": table_data.headers,
+            "rows": table_data.rows,
+        },
+        ensure_ascii=False,
+        indent=2
+    ),
+    encoding="utf-8"
+)
+logger.info("Table JSON saved: %s", EXTRACTED_JSON)
