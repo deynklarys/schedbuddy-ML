@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 HEADER_NAMES = ["code", "subject", "units", "class", "days", "time", "room", "faculty"]
 
 # Default course database
-default_course_db: CourseDatabase = CourseDatabase.from_dir("structure_detection/databases")
+default_course_db: CourseDatabase = CourseDatabase.from_dir("databases")
 
 # Fuzzy matching
 def _best_fuzzy_match(
