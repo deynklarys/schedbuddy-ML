@@ -1,41 +1,186 @@
 # SchedBuddy-ML
 
-**Project Overview**
-- **Purpose:**: Schedule builder that integrates machine learning to automatically generate timetable, specifically for Bicol University students.
-- **Machine Learning resources:** Label Studio, YOLO11s, Hugging Face Table Transformer: microsoft/table-detection-model and microsoft/table-detection-structure-recognition, Tesseract, [Borderless Tables Detection](https://github.com/ShakilMahmudShuvo/Borderless-Tables-Detection)
+Automated machine learning pipeline for extracting structured course schedule data from student document images.
+
+## Project Overview
+
+**Purpose:** Automatically generate timetables for Bicol University students by extracting and parsing schedule data from scanned course documents.
+
+**Output:** Structured JSON containing course codes, subjects, units, class sections, meeting times, rooms, and faculty information.
+
+**Core Technologies:**
+- **Table Detection:** YOLOv11s (custom trained on schedule documents)
+- **Structure Recognition:** Hugging Face Table Transformer (`microsoft/table-detection-structure-recognition`)
+- **OCR:** Tesseract with custom PSM configurations
+- **Image Processing:** OpenCV, Pillow
+- **Data Validation:** Fuzzy matching, course database matching, semantic validation
+
 ---
-## **Workflow**
-- `detection-model/`: Table Transformer + Tesseract OCR extraction pipeline for structured JSON output
-- `model/`: YOLO training and inference pipeline for table detection.
+
+## Pipeline Architecture
+
+Complete inference pipeline with four stages:
+
+```
+Raw Document Image
+    ↓
+[1. Image Preprocessing] — Normalization, quality gates, enhancement (WIP)
+    ↓
+[2. Table Detection] — YOLO locates table regions
+    ↓
+[3. Structure Detection] — Table Transformer finds rows/columns
+    ↓
+[4. Data Extraction] — OCR + validation → structured JSON
+```
+
+**For detailed documentation, see [inference-pipeline.md](inference-pipeline.md)**
+
 ---
-## **Approach**
-**1. Image Processing and Loading**
 
-The input image is loaded using the Pillow (PIL) library. Since the model expects the image in RGB format, the image is converted from any format (e.g., grayscale, CMYK) to RGB.
+## Directory Structure
 
-The image is then passed through the `DetrImageProcessor` provided by Hugging Face, which converts the image into a tensor format compatible with PyTorch. This extracted feature tensor serves as the input to the table detection and structure recognition models.
+```
+schedbuddy-ML/
+├── databases/                  # Course databases (JSON)
+├── detector.py                 # BorderlessTableDetector class
+├── extraction.py               # OCR and data extraction
+├── column_handlers.py          # Column-specific processing logic
+├── models.py                   # Data model classes
+├── config.py                   # Configuration constants
+├── course_db.py                # Course database interface
+├── utils.py                    # Utility functions
+├── inference.py                # Main inference script
+├── requirements.txt            # Python dependencies
+└── README.md                   # This file
+```
 
-**2. Model Selection and Loading**
-
-The project currently uses two model from Hugging Face's Table Transformer suite, specifically designed for table detection and table structure recognition:
-- **Table Detection Model**
-    
-    The table detection model (`microsoft/table-detection-model`) functions similarly with `model/`, which is custom trained using YOLOv11s. It looks at the image and identifies the schedule table. The model processes the extracted feature tensors and outputs a bounding box around the table. In comparison, `model/` relies on the existing grid present in the COR while the table detection model finds edges among the text to define the entire table. 
-
-        The model architecture includes a ResNet backbone followed by a transformer encoder-decoder structure. The ResNet backbone captures local features (like edges or corners), while the transformer layers model long-range dependencies, which are crucial for understanding table layouts, especially when no borders are present.
-
-    Disclaimer: This model is not used in this project as the `model/` already functions accurately. It is only included in this approach serving as an option and for future purposes.
-- **Table Detection Structure Recognition**
-    
-    Once the tables are identified, the table structure recognition model (`microsoft/table-detection-structure-recognition`) is employed to detect the internal structure of the table. It predicts the arrangement of rows, columns, and potentially spanning cells within each table. It outputs bounding boxes and labels corresponding to a specific element in the table.
 ---
-## **Next Improvements**
-- Do changes in row structure to exclude the unit summary; may be done hardcoded, however, conflicts may arise when the institution changes their formatting.
-- Fine-tune OCR to accurately extract text. Suggested solutions:
-    - Explore other OCR configurations (current: PSM = 6)
-        - `--oem 3 --psm 7`   for single text line (good for single-row cells)
-        - `--oem 3 --psm 8`  for  single word (good for numeric/code cells)
-        - `--oem 3 --psm 6`  for block of text (good for multi-line cells)
-        - `--oem 3 --psm 13` for raw line, no layout analysis (sometimes better for small crops)
-    - Preprocess each cell before OCR
-    - Train a custom Tesseract model
+
+## Key Components
+
+### Stage 1: Image Preprocessing (WIP)
+
+**Three-phase pipeline:**
+- **Phase 0:** Document normalization (framing, perspective correction, orientation)
+- **Phase 1:** Quality gates (resolution, blur, brightness, borders, skew)
+- **Phase 2:** OCR enhancement (CLAHE lighting, minor deskewing)
+
+**Features:**
+- Configurable quality thresholds in `PreprocessingConfig`
+- Rejects low-quality images early to save computation
+- Caches analysis metadata for Phase 2 optimization
+
+### Stage 2: Table Detection and Cropping
+
+**YOLOv11s model for table localization:**
+- Custom trained on Bicol University schedule documents
+- Detects table bounding boxes in normalized images
+- Confidence threshold: 0.80 (tunable)
+- Output: Cropped table regions for structure detection
+
+**Cropping**
+- Extract table regions from detections
+
+### Stage 3: Structure Detection and Data Extraction
+
+**Table Transformer + Tesseract OCR:**
+
+**BorderlessTableDetector** (`detector.py`):
+- Loads Table Transformer model from Hugging Face
+- Detects rows and columns within tables
+- Coordinates OCR extraction for each cell
+- Handles borderless table layouts
+
+**Data Extraction** (`extraction.py`):
+- OCR configuration: PSM 6 (block of text) — customizable
+- Header detection and fuzzy matching against expected columns
+- Cell content extraction and validation
+
+**Validation & Matching** ( `column_handlers.py`):
+- Fuzzy matching for headers: code, subject, units, class, days, time, room, faculty
+- Course database matching (5 department + 1 GEC databases in `databases/`)
+- Column-specific handlers for semantic validation:
+  - Course codes against known database
+  - Time parsing and validation
+  - Day normalization (M, T, W, Th, F, S, Su)
+  - Room code extraction
+  - Faculty name processing
+
+### Stage 4: Data Extraction
+
+**Output Format (JSON):**
+```json
+{
+  "image file:": "C:\\Computer-Science\\schedbuddy-ML\\output\\5ef068b5-113\\table_5ef068b5-113.jpg",
+  "ocr configuration:": "--oem 3 --psm 6",
+  "headers": [ "code", "subject", "units", "class", "days", "time", "room", "faculty" ],
+  "rows": [
+    {
+      "code": "NSTP 12",
+      "subject": "CWTS/LTS/ROTC",
+      "units": {
+        "credit": 0.0,
+        "lec": 3.0,
+        "lab": 0.0
+      },
+      "class": "BUCS-LTS-AM2",
+      "schedules": [
+        {
+          "days": [
+            "saturday"
+          ],
+          "time": {
+            "start": "13:00 PM",
+            "end": "16:00 PM"
+          },
+          "room": "CS-04-203",
+          "faculty": "SERRANO, K."
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## Configuration
+
+### Structure Detection ([config.py](config.py))
+
+- Detection threshold: 0.9
+- Structure model: `microsoft/table-detection-structure-recognition`
+- OCR config: `--oem 3 --psm 6`
+- Course databases: 6 JSON files in `databases/`
+
+### Header Matching ([extraction.py](extraction.py))
+
+- Minimum fuzzy match score: 70%
+- Expected headers: code, subject, units, class, days, time, room, faculty
+
+---
+
+## Dependencies
+
+- `pillow >= 9.0` — Image I/O
+- `opencv-python >= 4.5` — Image processing
+- `torch` — Deep learning (for Table Transformer)
+- `transformers` — Hugging Face models
+- `pytesseract` — OCR interface
+- `ultralytics` — YOLO training and inference
+- `rapidfuzz` — Fuzzy text matching
+- `numpy` — Numerical operations
+
+See [requirements.txt](requirements.txt) for complete list with versions.
+
+---
+
+## References
+
+- [Table Transformer (Hugging Face)](https://huggingface.co/microsoft/table-transformer-detection)
+- [Tesseract OCR](https://github.com/UB-Mannheim/tesseract/wiki)
+- [YOLOv11 Docs](https://docs.ultralytics.com/)
+- [Borderless Tables Detection](https://github.com/ShakilMahmudShuvo/Borderless-Tables-Detection)
+
+---
+
