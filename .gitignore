@@ -10,10 +10,7 @@
 
 TODO.md
 
-table_detection/data
-table_detection/runs
 table-schedule
-extracted-data
-detections.json
 
-*.pt
+# Output folder for inference pipeline
+output
