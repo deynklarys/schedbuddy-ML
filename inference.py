@@ -24,3 +24,12 @@ CROPPED_OUTPUT = OUTPUT_DIR / f"cropped_{img_path_wo_ext}.jpg"
 STRUCT_OUTPUT = OUTPUT_DIR / f"struct_{img_path_wo_ext}.jpg"
 DETECTIONS_JSON = OUTPUT_DIR / f"detections_{img_path_wo_ext}.json"
 EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path_wo_ext}.json"
+
+# -------------------------------------------------------------------
+# Stage 1: Preprocessing (WIP)
+# -------------------------------------------------------------------
+
+# PDF to image conversion (if needed)
+
+# Enhance image quality
+
