@@ -6,10 +6,10 @@ import logging
 from dataclasses import asdict
 import re
 
-from models import Detection, CellRecord, TableData
-from utils import bbox_intersection, ocr_crop
-from match_text import match_header, match_course
-from parse_time import parse_time
+from .models import Detection, CellRecord, TableData
+from .utils import bbox_intersection, ocr_crop
+from .match_text import match_header, match_course
+from .parse_time import parse_time
 
 logger = logging.getLogger(__name__)
 

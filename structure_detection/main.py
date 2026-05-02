@@ -8,10 +8,10 @@ import os
 from pathlib import Path
 from dataclasses import asdict
 
-from detector import BorderlessTableDetector
-from extraction import extract_table
-from config import TESSERACT_CONFIG
-from logger import log_time
+from .detector import BorderlessTableDetector
+from .extraction import extract_table
+from .config import TESSERACT_CONFIG
+from .logger import log_time
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)

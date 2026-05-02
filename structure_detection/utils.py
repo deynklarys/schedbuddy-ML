@@ -5,7 +5,7 @@ from typing import Optional
 from PIL import Image
 import pytesseract
 
-from config import TESSERACT_CONFIG
+from .config import TESSERACT_CONFIG
 
 
 def bbox_intersection(

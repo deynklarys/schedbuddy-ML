@@ -8,17 +8,17 @@ from typing import Any
 
 from rapidfuzz import fuzz
 
-from column_handlers import ColumnHandler, get_handler
-from course_db import CourseDatabase
-from models import CellRecord, Detection, TableData
-from utils import bbox_intersection, ocr_crop
+from .column_handlers import ColumnHandler, get_handler
+from .course_db import CourseDatabase
+from .models import CellRecord, Detection, TableData
+from .utils import bbox_intersection, ocr_crop
 
 logger = logging.getLogger(__name__)
 
 HEADER_NAMES = ["code", "subject", "units", "class", "days", "time", "room", "faculty"]
 
 # Default course database
-default_course_db: CourseDatabase = CourseDatabase.from_dir("databases")
+default_course_db: CourseDatabase = CourseDatabase.from_dir("structure_detection/databases")
 
 # Fuzzy matching
 def _best_fuzzy_match(

@@ -11,8 +11,8 @@ import matplotlib.patches as mpatches
 from PIL import Image, UnidentifiedImageError
 from transformers import DetrImageProcessor, TableTransformerForObjectDetection
 
-from config import COLORS, DETECTION_MODEL, STRUCTURE_MODEL
-from models import Detection
+from .config import COLORS, DETECTION_MODEL, STRUCTURE_MODEL
+from .models import Detection
 
 logger = logging.getLogger(__name__)
 

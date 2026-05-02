@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from models import TimeData 
+from .models import TimeData 
 
 def parse_time(time_str):
     parts = [part.strip() for part in time_str.split("-")]
