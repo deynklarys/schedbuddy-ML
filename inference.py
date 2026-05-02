@@ -50,7 +50,7 @@ EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path_wo_ext}.json"
 # Stage 2: Table Detection and Cropping
 # -----------------------------------------------------------------------------
 # TODO: improve error handling, might be better to wrap in a function and use try/except
-model = YOLO("table_detection/runs/detect/train/weights/best.pt")
+model = YOLO("model.pt")
 
 # Run inference
 results = model.predict(
