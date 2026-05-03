@@ -5,6 +5,7 @@ ultralytics>=8.0.0
 # Image processing
 opencv-python>=4.8.0
 numpy>=1.21.0
+pymupdf
 
 # Configuration and utilities
 pyyaml>=6.0
