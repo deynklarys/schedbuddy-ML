@@ -2,6 +2,7 @@ import shutil
 import sys
 from pathlib import Path
 
+import cv2
 import fitz  # PyMuPDF
 import numpy as np
 from jdeskew.estimator import get_angle
@@ -38,6 +39,18 @@ def to_jpg(input_path: str) -> str:
     return str(out_file)
 
 
+def laplacian_variance(image_path: str) -> float:
+    img = cv2.imread(image_path)
+    if img is None:
+        raise FileNotFoundError(f"CV2 could not read: {image_path}")
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var()
+
+
+def is_sharp_enough(image_path: str, threshold: float = 25) -> bool:
+    return laplacian_variance(image_path) >= threshold
+
+
 def deskew(image_path: str, threshold: float = 0.001) -> str:
     """
     Load image, detect skew, correct only if needed.
@@ -66,6 +79,10 @@ if __name__ == "__main__":
         input_file = sys.argv[1]
         result = to_jpg(input_file)
         print(f"Converted to {result}")
+
+        if not is_sharp_enough(result):
+            print("Photo quality too poor. Please retake.")
+            sys.exit(1)
 
         after_deskew = deskew(result)
         print(f"Deskewed image saved as {after_deskew}")
