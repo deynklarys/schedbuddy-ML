@@ -71,6 +71,32 @@ def deskew(image_path: str, threshold: float = 0.001) -> str:
     return image_path  # no deskew applied, original file
 
 
+def enhance_for_ocr(image_path: str, darkness_threshold: int = 130) -> str:
+    path = Path(image_path)
+    img_bgr = cv2.imread(str(path))
+    if img_bgr is None:
+        raise FileNotFoundError(f"CV2 could not read: {image_path}")
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    if gray.mean() < darkness_threshold:
+        result = cv2.adaptiveThreshold(
+            gray.astype(np.uint8),
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY,
+            41,  # blockSize: larger = adapts to broader lighting variation
+            10,  # C: larger = more aggresive darkening cut
+        )
+        out_path = path.with_stem(path.stem + "_enhanced")
+        cv2.imwrite(str(out_path), result)
+        print(f"Dark image (mean={gray.mean():.1f}).")
+        print(f"Otsu applied:{out_path}")
+        return str(out_path)
+
+    print(f"Image fine (mean={gray.mean():.1f}). No enchancement applied.")
+    return image_path
+
+
 if __name__ == "__main__":
     if len(sys.argv) != 2:
         print("Usage: python preprocess.py filename")
@@ -86,3 +112,6 @@ if __name__ == "__main__":
 
         after_deskew = deskew(result)
         print(f"Deskewed image saved as {after_deskew}")
+
+        after_enhance = enhance_for_ocr(after_deskew)
+        print(f"Final image: {after_enhance}")
