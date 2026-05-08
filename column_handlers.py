@@ -97,24 +97,33 @@ class UnitsHandler(ColumnHandler):
 class DaysHandler(ColumnHandler):
     is_schedule_field = True
 
-    # Order matters: longer/overlapping tokens must come before shorter ones.
-    _TOKENS: list[tuple[str, str]] = [
-        ("Th", "thursday"),
-        ("Sa", "saturday"),
-        ("Su", "sunday"),
-        ("M",  "monday"),
-        ("T",  "tuesday"),
-        ("W",  "wednesday"),
-        ("F",  "friday"),
-    ]
+    _DAY_ALIASES: dict[str, list[str]] = {
+        "monday":    ["Mon", "M"],
+        "tuesday":   ["Tue", "Tu", "T"],
+        "wednesday": ["Wed", "W"],
+        "thursday":  ["Thu", "Th"],
+        "friday":    ["Fri", "F"],
+        "saturday":  ["Sat", "Sa", "S"],
+        "sunday":    ["Sun", "Su"],
+    }
+
+    _TOKENS: list[tuple[str, str]] = sorted(
+        [
+            (abbr, day)
+            for day, abbrs in _DAY_ALIASES.items()
+            for abbr in abbrs
+        ],
+        key=lambda pair: len(pair[0]),
+        reverse=True,
+    )
 
     def parse_cell(self, text: str) -> list[str]:
-        """Return a list of full day names, e.g. ``["tuesday", "thursday"]``."""
+        cleaned = re.sub(r"[^a-zA-Z]", "", text).lower()
         result: list[str] = []
         i = 0
-        while i < len(text):
+        while i < len(cleaned):
             for abbr, day in self._TOKENS:
-                if text[i: i + len(abbr)] == abbr:
+                if cleaned[i: i + len(abbr)] == abbr.lower():
                     if day not in result:
                         result.append(day)
                     i += len(abbr)
@@ -141,10 +150,8 @@ class TimeHandler(ColumnHandler):
         start = datetime.strptime(parts[0], self._TIME_FORMAT).time()
         end   = datetime.strptime(parts[1], self._TIME_FORMAT).time()
         return {
-            # "start": start.hour * 60 + start.minute,
-            # "end":   end.hour   * 60 + end.minute,
-            "start": start.strftime("%H:%M %p"),
-            "end":   end.strftime("%H:%M %p"),
+            "start": start.hour * 60 + start.minute,
+            "end":   end.hour   * 60 + end.minute
         }
 
 
