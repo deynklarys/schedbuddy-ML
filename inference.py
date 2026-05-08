@@ -10,12 +10,6 @@ import logging
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
-from ultralytics import YOLO
-
-from config import TESSERACT_CONFIG
-from detector import BorderlessTableDetector
-from extraction import extract_table
-
 
 # Modify as needed
 sample_image = "4d3c3cef-107.png"
@@ -54,6 +48,9 @@ DESKEWED_OUTPUT = OUTPUT_DIR / f"deskewed_{img_path.stem}.jpg"
 # Stage 2: Table Detection and Cropping
 # -----------------------------------------------------------------------------
 # TODO: improve error handling, might be better to wrap in a function and use try/except
+
+from ultralytics import YOLO
+
 model = YOLO("model.pt")
 
 # Run inference
@@ -136,6 +133,12 @@ if lines[0]:
 # -----------------------------------------------------------------------------
 # Stage 3: Table Structure Detection
 # -----------------------------------------------------------------------------
+from ultralytics import YOLO
+
+from config import TESSERACT_CONFIG
+from detector import BorderlessTableDetector
+from extraction import extract_table
+
 detector = BorderlessTableDetector(
 image_path=CROPPED_OUTPUT,
 output_path=STRUCT_OUTPUT
