@@ -32,7 +32,7 @@ def to_jpg(input_path: str) -> str:
 
     doc = fitz.open(input_path)
     pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2), colorspace=fitz.csRGB)
-    out_file = OUTPUT_DIR / f"{p.stem}.jpg"  # assumes first page contains sched
+    out_file = OUTPUT_DIR / f"{p.stem}" /f"{p.stem}_jpg.jpg"  # assumes first page contains sched
     pix.save(str(out_file))
     doc.close()
 
@@ -64,7 +64,7 @@ def deskew(image_path: str, threshold: float = 0.001) -> str:
         img = rotate(img, angle, reshape=True, cval=255)
         img = np.clip(img, 0, 255).astype(np.uint8)
 
-        out_path = path.with_stem(path.stem + "_deskewed")
+        out_path = Path(OUTPUT_DIR / f"{path.stem}" / f"{path.stem}_deskewed.jpg")
         Image.fromarray(img).save(out_path)
         return str(out_path)
 
@@ -87,7 +87,7 @@ def enhance_for_ocr(image_path: str, darkness_threshold: int = 130) -> str:
             41,  # blockSize: larger = adapts to broader lighting variation
             10,  # C: larger = more aggresive darkening cut
         )
-        out_path = path.with_stem(path.stem + "_enhanced")
+        out_path = Path(OUTPUT_DIR / f"{path.stem}" / f"{path.stem}_enhanced.jpg")
         cv2.imwrite(str(out_path), result)
         print(f"Dark image (mean={gray.mean():.1f}).")
         print(f"Otsu applied:{out_path}")
