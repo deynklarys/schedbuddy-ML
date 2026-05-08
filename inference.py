@@ -84,7 +84,10 @@ with LABEL_PATH.open("r", encoding="utf-8") as file:
     lines = [line.strip() for line in file if line.strip()]
 
 table_class_id = 0
-padding = 2
+# x padding is greater because sometimes bbox is too tight and cuts off table borders,
+# which can cause issues for structure detection.
+x_padding = 10
+y_padding = 2
 
 if lines[0]:
     parts = lines[0].split()
@@ -109,10 +112,10 @@ if lines[0]:
     x2 = int(round(x_center + box_width / 2))
     y2 = int(round(y_center + box_height / 2))
 
-    x1 -= padding
-    y1 -= padding
-    x2 += padding
-    y2 += padding
+    x1 -= x_padding
+    y1 -= y_padding
+    x2 += x_padding
+    y2 += y_padding
 
     x1 = max(0, min(x1, image.shape[1]))
     x2 = max(0, min(x2, image.shape[1]))
