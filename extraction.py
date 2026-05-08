@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import asdict
+from pathlib import Path
 from typing import Any
 
 from rapidfuzz import fuzz
@@ -18,7 +19,9 @@ logger = logging.getLogger(__name__)
 HEADER_NAMES = ["code", "subject", "units", "class", "days", "time", "room", "faculty"]
 
 # Default course database
-default_course_db: CourseDatabase = CourseDatabase.from_dir("databases")
+default_course_db: CourseDatabase = CourseDatabase.from_dir(
+    Path(__file__).parent / "databases"
+)
 
 # Fuzzy matching
 def _best_fuzzy_match(
