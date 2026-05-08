@@ -1,6 +1,7 @@
 .venv/
 *__pycache__
 *.cache
+*.pytest_cache
 
 # For samples
 *.jpg
