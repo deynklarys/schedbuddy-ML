@@ -28,7 +28,7 @@ def _best_fuzzy_match(
     query: str,
     candidates: list[str],
     min_score: int = 0,
-) -> tuple[str, int]:
+) -> tuple[str, float]:
     best_name, best_score = query, -1
     for candidate in candidates:
         score = max(
@@ -39,7 +39,7 @@ def _best_fuzzy_match(
             best_name, best_score = candidate, score
     return best_name, best_score
 
-def match_header(extracted_text: str, min_score: int = 0) -> tuple[str, int]:
+def match_header(extracted_text: str, min_score: int = 0) -> tuple[str, float]:
     return _best_fuzzy_match(extracted_text, HEADER_NAMES, min_score)
 
 def match_course(
@@ -233,7 +233,8 @@ def _apply_course_matching(
         logger.info("Course match: %r → %r (score: %d)", raw, matched_code, score)
         if score < 70:
             row[code_col] = ""
-            row[subj_col] = ""
+            if subj_col:
+                row[subj_col] = ""
         else:            
             row[code_col] = matched_code
             if subj_col:
