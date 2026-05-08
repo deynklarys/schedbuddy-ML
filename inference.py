@@ -2,6 +2,8 @@ from pathlib import Path
 import os
 import json
 import shutil
+import sys
+
 import cv2
 
 import logging 
@@ -22,21 +24,23 @@ sample_image = "1f4a47d1-242.png"
 base_dir = Path(__file__).resolve().parent
 
 img_path = base_dir / "sample" / sample_image
-img_path_wo_ext = os.path.splitext(sample_image)[0]
 
-OUTPUT_DIR  = base_dir / "output" / f"{img_path_wo_ext}"
+OUTPUT_DIR  = base_dir / "output" / f"{img_path.stem}"
 
 # Remove old output if it exists
 if OUTPUT_DIR.exists():
     shutil.rmtree(OUTPUT_DIR)
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-TABLE_OUTPUT = OUTPUT_DIR / f"table_{img_path_wo_ext}.jpg"
-LABEL_PATH = OUTPUT_DIR / "labels" / f"{img_path_wo_ext}.txt"
-CROPPED_OUTPUT = OUTPUT_DIR / f"cropped_{img_path_wo_ext}.jpg"
-STRUCT_OUTPUT = OUTPUT_DIR / f"struct_{img_path_wo_ext}.jpg"
-DETECTIONS_JSON = OUTPUT_DIR / f"detections_{img_path_wo_ext}.json"
-EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path_wo_ext}.json"
+TABLE_OUTPUT = OUTPUT_DIR / f"table_{img_path.stem}.jpg"
+LABEL_PATH = OUTPUT_DIR / "labels" / f"{img_path.stem}.txt"
+CROPPED_OUTPUT = OUTPUT_DIR / f"cropped_{img_path.stem}.jpg"
+STRUCT_OUTPUT = OUTPUT_DIR / f"struct_{img_path.stem}.jpg"
+DETECTIONS_JSON = OUTPUT_DIR / f"detections_{img_path.stem}.json"
+EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path.stem}.json"
+
+JPG_OUTPUT = OUTPUT_DIR / f"jpg_{img_path.stem}.jpg"
+DESKEWED_OUTPUT = OUTPUT_DIR / f"deskewed_{img_path.stem}.jpg"
 
 # -------------------------------------------------------------------
 # Stage 1: Preprocessing (WIP)
@@ -61,7 +65,7 @@ results = model.predict(
     name=".",
     exist_ok=True)
 
-results[0].save(TABLE_OUTPUT)
+results[0].save(str(TABLE_OUTPUT))
 
 
 # Crop table based on label
@@ -69,11 +73,11 @@ image_path = TABLE_OUTPUT
 image = cv2.imread(str(image_path))
 if image is None:
     print(f"Skipped unreadable image: {image_path}")
-    exit(1)
+    sys.exit(1)
 
 if not LABEL_PATH.exists():
     print(f"Skipped (no label file): {LABEL_PATH}")
-    exit(1)
+    sys.exit(1)
 
 height, width = image.shape[:2]
 with LABEL_PATH.open("r", encoding="utf-8") as file:
@@ -123,7 +127,7 @@ if lines[0]:
         logger.warning(f"Invalid cropped image for {image_path}: ({x1}, {y1}, {x2}, {y2})")
         exit(1)
 
-    output_path = OUTPUT_DIR / f"{img_path_wo_ext}_table{img_path.suffix}"
+    output_path = OUTPUT_DIR / f"{img_path.stem}_table{img_path.suffix}"
     cv2.imwrite(str(output_path), cropped)
     logger.info(f"Saved: {output_path}")
 
