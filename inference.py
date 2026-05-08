@@ -148,8 +148,6 @@ detections, _ = detector.process(
 # Stage 4: Data Extraction
 # -----------------------------------------------------------------------------
 table_data = extract_table(detector, detections)
-
-output = extract_table(detector, detections)
 Path(EXTRACTED_JSON).write_text(
     json.dumps(
         {
