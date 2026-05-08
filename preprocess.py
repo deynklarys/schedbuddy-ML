@@ -91,7 +91,7 @@ def preprocess(input_path: str) -> str:
     suffix = "_" + "_".join(steps_applied) if steps_applied else "_clean"
     out_dir = OUTPUT_DIR / p.stem
     out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{p.stem}{suffix}.jpg"
+    out_path = out_dir / f"{p.stem}.jpg"
 
     Image.fromarray(img).save(str(out_path))
     print(f"Preprocessed image saved: {out_path}")

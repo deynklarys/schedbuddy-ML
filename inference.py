@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 import json
 import shutil
 import sys
@@ -27,19 +26,14 @@ def run_pipeline(img_path: Path):
     LABEL_PATH = OUTPUT_DIR / "labels" / f"{img_path.stem}.txt"
     CROPPED_OUTPUT = OUTPUT_DIR / f"cropped_{img_path.stem}.jpg"
     STRUCT_OUTPUT = OUTPUT_DIR / f"struct_{img_path.stem}.jpg"
-    DETECTIONS_JSON = OUTPUT_DIR / f"detections_{img_path.stem}.json"
     EXTRACTED_JSON = OUTPUT_DIR / f"extracted_{img_path.stem}.json"
 
-    JPG_OUTPUT = OUTPUT_DIR / f"jpg_{img_path.stem}.jpg"
-    DESKEWED_OUTPUT = OUTPUT_DIR / f"deskewed_{img_path.stem}.jpg"
+    # -----------------------------------------------------------------------------
+    # Stage 1: Preprocessing
+    # -----------------------------------------------------------------------------
+    from preprocess import preprocess
 
-    # -------------------------------------------------------------------
-    # Stage 1: Preprocessing (WIP)
-    # -------------------------------------------------------------------
-
-    # PDF to image conversion (if needed)
-
-    # Enhance image quality
+    preprocessed_path = preprocess(str(img_path))
 
     # -----------------------------------------------------------------------------
     # Stage 2: Table Detection and Cropping
@@ -51,7 +45,7 @@ def run_pipeline(img_path: Path):
 
     # Run inference
     results = model.predict(
-        source=img_path,
+        source=preprocessed_path,
         conf=0.8, 
         save_txt=True, 
         project=str(OUTPUT_DIR),

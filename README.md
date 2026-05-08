@@ -58,7 +58,7 @@ schedbuddy-ML/
 
 ## Key Components
 
-### Stage 1: Image Preprocessing (WIP)
+### Stage 1: Image Preprocessing
 
 **Three-phase pipeline:**
 - **Phase 0:** Document normalization (framing, perspective correction, orientation)
