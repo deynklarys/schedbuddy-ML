@@ -135,24 +135,37 @@ class DaysHandler(ColumnHandler):
         return result
 
 
+import re
+from datetime import time
+
 class TimeHandler(ColumnHandler):
     is_schedule_field = True
-    _TIME_FORMAT = "%I:%M %p"
+
+    _TIME_RE = re.compile(
+        r'(\d{1,2}):(\d{2})\s*(AM|PM)',
+        re.IGNORECASE
+    )
 
     def parse_cell(self, text: str) -> dict[str, int]:
-        from datetime import datetime
-
-        parts = [p.strip() for p in text.split("-")]
-        if len(parts) != 2:
+        matches = self._TIME_RE.findall(text)
+        if len(matches) < 2:
             raise ValueError(
-                f"Expected 'HH:MM AM/PM - HH:MM AM/PM', got: {text!r}"
+                f"Expected two time values (HH:MM AM/PM) in: {text!r}"
             )
-        start = datetime.strptime(parts[0], self._TIME_FORMAT).time()
-        end   = datetime.strptime(parts[1], self._TIME_FORMAT).time()
-        return {
-            "start": start.hour * 60 + start.minute,
-            "end":   end.hour   * 60 + end.minute
-        }
+
+        start = self._to_minutes(*matches[0])
+        end   = self._to_minutes(*matches[1])
+        return {"start": start, "end": end}
+
+    @staticmethod
+    def _to_minutes(hour: str, minute: str, meridian: str) -> int:
+        h, m = int(hour), int(minute)
+        mer = meridian.upper()
+        if mer == "PM" and h != 12:
+            h += 12
+        elif mer == "AM" and h == 12:
+            h = 0
+        return h * 60 + m
 
 
 class RoomHandler(ColumnHandler):
