@@ -164,10 +164,10 @@ def extract_table(
                     parsed_cells[name] = handler.parse_cell(text)
                 except (ValueError, KeyError):
                     logger.warning(
-                        "Handler %s failed on %r (row %d, col %s); raw text = %r. Sending empty string.",
-                        type(handler).__name__, text, r_idx, name, text,
+                        "Handler %s failed on %r (row %d, col %s); keeping raw text.",
+                        type(handler).__name__, text, r_idx, name,
                     )
-                    parsed_cells[name] = ""
+                    parsed_cells[name] = text
 
         expanded = _expand_multiline_rows(
             {**parsed_cells, **raw_cells},
@@ -209,10 +209,9 @@ def _parse_schedule_slots(
                 slot[field] = handler.parse_cell(raw)
             except (ValueError, KeyError):
                 logger.warning(
-                    "Handler %s failed on slot field %r=%r; sending empty string.",
+                    "Handler %s failed on slot field %r=%r; keeping raw text.",
                     type(handler).__name__, field, raw,
                 )
-                slot[field] = ""
 
 
 def _apply_course_matching(
@@ -231,11 +230,6 @@ def _apply_course_matching(
             continue
         matched_code, score, subject = match_course(raw, min_score=70, db=db)
         logger.info("Course match: %r → %r (score: %d)", raw, matched_code, score)
-        if score < 70:
-            row[code_col] = ""
-            if subj_col:
-                row[subj_col] = ""
-        else:            
-            row[code_col] = matched_code
-            if subj_col:
-                row[subj_col] = subject
+        row[code_col] = matched_code
+        if subj_col:
+            row[subj_col] = subject
