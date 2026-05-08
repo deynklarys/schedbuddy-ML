@@ -1,4 +1,3 @@
-import shutil
 import sys
 from pathlib import Path
 
@@ -14,71 +13,37 @@ OUTPUT_DIR = Path("output")
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 
-def to_jpg(input_path: str) -> str:
-    """
-    Convert any supported file type to .jpg
-    """
-    p = Path(input_path)
-
-    if not p.exists():
-        raise FileNotFoundError(f"Not found: {p}")
-    if p.suffix.lower() not in SUPPORTED_TYPES:
-        raise ValueError(f"Unsupported filetype: {p.suffix}")
-
-    if p.suffix.lower() == ".jpg":
-        dest = OUTPUT_DIR / p.name
-        shutil.copy(p, dest)
-        return str(dest)
-
-    doc = fitz.open(input_path)
-    pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2), colorspace=fitz.csRGB)
-    out_file = OUTPUT_DIR / f"{p.stem}" /f"{p.stem}_jpg.jpg"  # assumes first page contains sched
-    pix.save(str(out_file))
-    doc.close()
-
-    return str(out_file)
+def _normalize_input(input_path: Path) -> np.ndarray:
+    if input_path.suffix.lower() == ".pdf":
+        doc = fitz.open(str(input_path))
+        pix = doc[0].get_pixmap(matrix=fitz.Matrix(2, 2), colorspace=fitz.csRGB)
+        doc.close()
+        return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, 3)
+    return np.array(Image.open(input_path).convert("RGB"))
 
 
-def laplacian_variance(image_path: str) -> float:
-    img = cv2.imread(image_path)
-    if img is None:
-        raise FileNotFoundError(f"CV2 could not read: {image_path}")
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    return cv2.Laplacian(gray, cv2.CV_64F).var()
+def _is_sharp_enough(img_bgr: np.ndarray, threshold: float = 25) -> bool:
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    return cv2.Laplacian(gray, cv2.CV_64F).var() >= threshold
 
 
-def is_sharp_enough(image_path: str, threshold: float = 25) -> bool:
-    return laplacian_variance(image_path) >= threshold
-
-
-def deskew(image_path: str, threshold: float = 0.001) -> str:
-    """
-    Load image, detect skew, correct only if needed.
-    thredhold: mininum degrees to apply correction (avoids micro-rotations)
-    """
-    path = Path(image_path)
-    img = np.array(Image.open(path).convert("RGB"))
-    angle = get_angle(img)
+def _deskew(img_rgb: np.ndarray, threshold: float = 0.001) -> np.ndarray:
+    angle = get_angle(img_rgb)
 
     if abs(angle) >= threshold:
-        img = rotate(img, angle, reshape=True, cval=255)
-        img = np.clip(img, 0, 255).astype(np.uint8)
+        untilted = rotate(img_rgb, angle, reshape=True, cval=255)
+        return np.clip(untilted, 0, 255).astype(np.uint8)
 
-        out_path = Path(OUTPUT_DIR / f"{path.stem}" / f"{path.stem}_deskewed.jpg")
-        Image.fromarray(img).save(out_path)
-        return str(out_path)
-
-    return image_path  # no deskew applied, original file
+    return img_rgb  # no deskew applied, original file as np.ndarray
 
 
-def enhance_for_ocr(image_path: str, darkness_threshold: int = 130) -> str:
-    path = Path(image_path)
-    img_bgr = cv2.imread(str(path))
-    if img_bgr is None:
-        raise FileNotFoundError(f"CV2 could not read: {image_path}")
+def _enhance_for_ocr(img_rgb: np.ndarray, darkness_threshold: int = 130) -> np.ndarray:
+    img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
     if gray.mean() < darkness_threshold:
+        print(f"Dark image (mean={gray.mean():.1f}).")
+        print("Applying adaptive threshold.")
         result = cv2.adaptiveThreshold(
             gray.astype(np.uint8),
             255,
@@ -87,14 +52,51 @@ def enhance_for_ocr(image_path: str, darkness_threshold: int = 130) -> str:
             41,  # blockSize: larger = adapts to broader lighting variation
             10,  # C: larger = more aggresive darkening cut
         )
-        out_path = Path(OUTPUT_DIR / f"{path.stem}" / f"{path.stem}_enhanced.jpg")
-        cv2.imwrite(str(out_path), result)
-        print(f"Dark image (mean={gray.mean():.1f}).")
-        print(f"Otsu applied:{out_path}")
-        return str(out_path)
+        return cv2.cvtColor(result, cv2.COLOR_GRAY2RGB)  # new file as np.ndarray
 
     print(f"Image fine (mean={gray.mean():.1f}). No enchancement applied.")
-    return image_path
+    return img_rgb
+
+
+def preprocess(input_path: str) -> str:
+    """
+    Full preprocessing pipeline: convert -> validate -> deskew -> enhance.
+    Returns the path to the final, saved image.
+    """
+    p = Path(input_path)
+    if not p.exists():
+        raise FileNotFoundError(f"Missing file: {p}")
+    if p.suffix.lower() not in SUPPORTED_TYPES:
+        raise ValueError(f"Unsupported filetype: {p.suffix}")
+
+    img = _normalize_input(p)
+    img_bgr = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+
+    if not _is_sharp_enough(img_bgr):
+        raise ValueError("Photo quality too poor. Please retake.")
+        # implement retake functionality here.
+
+    steps_applied = []
+
+    deskewed = _deskew(img)
+    if deskewed is not img:
+        steps_applied.append("deskewed")
+        img = deskewed
+
+    enhanced = _enhance_for_ocr(img)
+    if enhanced is not img:
+        steps_applied.append("enhanced")
+        img = enhanced
+
+    suffix = "_" + "_".join(steps_applied) if steps_applied else "_clean"
+    out_dir = OUTPUT_DIR / p.stem
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{p.stem}{suffix}.jpg"
+
+    Image.fromarray(img).save(str(out_path))
+    print(f"Preprocessed image saved: {out_path}")
+
+    return str(out_path)
 
 
 if __name__ == "__main__":
@@ -102,16 +104,4 @@ if __name__ == "__main__":
         print("Usage: python preprocess.py filename")
 
     else:
-        input_file = sys.argv[1]
-        result = to_jpg(input_file)
-        print(f"Converted to {result}")
-
-        if not is_sharp_enough(result):
-            print("Photo quality too poor. Please retake.")
-            sys.exit(1)
-
-        after_deskew = deskew(result)
-        print(f"Deskewed image saved as {after_deskew}")
-
-        after_enhance = enhance_for_ocr(after_deskew)
-        print(f"Final image: {after_enhance}")
+        print(preprocess(sys.argv[1]))
