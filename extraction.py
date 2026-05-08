@@ -55,6 +55,9 @@ def _resolve_column_handlers(
     columns: list,
     header_dets: list,
 ) -> tuple[list[str], list[ColumnHandler]]:
+    logger.info("⚠️  Resolving column handlers with %d columns and %d header detections",
+        len(columns), len(header_dets),
+    )
 
     n_cols = len(columns)
 
@@ -120,6 +123,7 @@ def extract_table(
     detections: list[Detection],
     db: CourseDatabase | None = None,
 ) -> TableData:
+    logger.info("⚠️  Starting table extraction with %d detections", len(detections))
 
     if detector.image is None:
         raise RuntimeError("Call process() before extract_table().")
@@ -144,6 +148,8 @@ def extract_table(
     cell_records:  list[CellRecord] = []
     rows_as_dicts: list[dict]       = []
     data_rows = rows[1:] if len(rows) > 1 else []
+    
+    logger.info("⚠️  Extracting data from %d rows and %d columns (after header)", len(data_rows), len(columns))
 
     for r_idx, row in enumerate(data_rows, 1):
         raw_cells:    dict[str, str] = {}
@@ -197,6 +203,8 @@ def _parse_schedule_slots(
     header_names: list[str],
     handlers: list[ColumnHandler],
 ) -> None:
+    logger.info("⚠️  Parsing schedule slots for entry: %s", entry)
+
     handler_map = dict(zip(header_names, handlers))
     for slot in entry.get("schedules", []):
         for field, raw in list(slot.items()):
@@ -219,6 +227,8 @@ def _apply_course_matching(
     header_names: list[str],
     db: CourseDatabase | None = None,
 ) -> None:
+    logger.info("⚠️  Applying course code matching to %d rows", len(rows))
+
     if not header_names:
         return
     code_col = header_names[0]
