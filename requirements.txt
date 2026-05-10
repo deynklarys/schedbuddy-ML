@@ -19,3 +19,6 @@ timm
 matplotlib
 Pillow
 pytesseract
+
+# Data Validation
+pydantic
