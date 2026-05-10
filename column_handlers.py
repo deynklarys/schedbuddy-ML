@@ -18,6 +18,8 @@ from rapidfuzz import fuzz
 from abc import ABC, abstractmethod
 from typing import Any
 
+from models import UnitBreakdown
+
 logger = logging.getLogger(__name__)
 
 class ColumnHandler(ABC):
@@ -30,6 +32,11 @@ class ColumnHandler(ABC):
         Override to do dynamic configuration (e.g. reading sub-column names
         from the header text).  The default implementation is a no-op.
         """
+
+    @property
+    def sub_columns(self) -> tuple[str, ...]:
+        """The active sub-column names (read-only). Override in subclasses."""
+        return ()
 
     @abstractmethod
     def parse_cell(self, text: str) -> Any:
@@ -86,12 +93,12 @@ class UnitsHandler(ColumnHandler):
         """The active sub-column names (read-only)."""
         return self._sub_cols
 
-    def parse_cell(self, text: str) -> dict[str, float]:
-        """Return ``{sub_col: value, …}`` for *text*."""
+    def parse_cell(self, text: str) -> UnitBreakdown:
+        """Return a ``UnitBreakdown`` for *text*."""
         numbers = re.findall(r"\d+(?:\.\d+)?", text.replace(",", "."))
-        result: dict[str, float] = dict.fromkeys(self._sub_cols, 0.0)
-        result.update(zip(self._sub_cols, map(float, numbers)))
-        return result
+        parsed = dict.fromkeys(self._sub_cols, 0.0)
+        parsed.update(zip(self._sub_cols, map(float, numbers)))
+        return UnitBreakdown(**parsed)
 
 
 class DaysHandler(ColumnHandler):
@@ -201,3 +208,10 @@ _FALLBACK_HANDLER = DefaultHandler()
 
 def get_handler(column_name: str) -> ColumnHandler:
     return COLUMN_REGISTRY.get(column_name, _FALLBACK_HANDLER)
+
+if __name__ == "__main__":
+    # UnitsHandler
+    handler = get_handler("units")
+    handler.configure("Units (Credit/Lec/Lab)")
+    print(handler.sub_columns)
+    print(handler.parse_cell("a 2,5 1.0"))
