@@ -28,10 +28,3 @@ class TableData:
     headers: list[str]
     rows: list[dict[str, str]]
     cells: list[dict]
-
-@dataclass
-class TimeData:
-    start: time
-    end: time
-    start_mins: int
-    end_mins: int
