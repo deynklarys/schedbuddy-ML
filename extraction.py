@@ -134,6 +134,62 @@ def _expand_multiline_rows(
 
     return [{**shared, "schedules": schedules}]
 
+# ---------------------------------------------------------------------------
+# Schedule-slot parsing (called per entry, not per row)
+# ---------------------------------------------------------------------------
+
+def _parse_schedule_slots(
+    entry: dict[str, Any],
+    header_names: list[str],
+    handlers: list[ColumnHandler],
+) -> None:
+    """Try to parse every raw-string field in each schedule slot."""
+    handler_map = dict(zip(header_names, handlers))
+    for slot in entry.get("schedules", []):
+        for field, raw in list(slot.items()):
+            if not isinstance(raw, str) or not raw.strip():
+                continue
+            handler = handler_map.get(field)
+            if handler is None:
+                continue
+            try:
+                slot[field] = handler.parse_cell(raw)
+            except (ValueError, KeyError):
+                logger.warning(
+                    "Handler %s failed on slot field %r=%r; "
+                    "value kept as raw text for fallback processing.",
+                    type(handler).__name__, field, raw,
+                )
+
+
+# ---------------------------------------------------------------------------
+# Course-code post-processing
+# ---------------------------------------------------------------------------
+
+def _apply_course_matching(
+    rows: list[dict[str, Any]],
+    header_names: list[str],
+    db: CourseDatabase | None = None,
+) -> None:
+    if not header_names:
+        return
+    code_col = header_names[0]
+    subj_col = header_names[1] if len(header_names) > 1 else None
+
+    for row in rows:
+        raw = row.get(code_col, "")
+        if not isinstance(raw, str) or not raw.strip():
+            continue
+        matched_code, score, subject = match_course(raw, min_score=70, db=db)
+        logger.info("Course match: %r → %r (score: %d)", raw, matched_code, score)
+        row[code_col] = matched_code
+        if subj_col:
+            row[subj_col] = subject
+
+
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
 
 def extract_table(
     detector,
@@ -214,49 +270,3 @@ def extract_table(
         rows=rows_as_dicts,
         cells=[asdict(c) for c in cell_records],
     )
-
-def _parse_schedule_slots(
-    entry: dict[str, Any],
-    header_names: list[str],
-    handlers: list[ColumnHandler],
-) -> None:
-    logger.info("⚠️  Parsing schedule slots for entry: %s", entry)
-
-    handler_map = dict(zip(header_names, handlers))
-    for slot in entry.get("schedules", []):
-        for field, raw in list(slot.items()):
-            if not isinstance(raw, str) or not raw.strip():
-                continue
-            handler = handler_map.get(field)
-            if handler is None:
-                continue
-            try:
-                slot[field] = handler.parse_cell(raw)
-            except (ValueError, KeyError):
-                logger.warning(
-                    "Handler %s failed on slot field %r=%r; keeping raw text.",
-                    type(handler).__name__, field, raw,
-                )
-
-
-def _apply_course_matching(
-    rows: list[dict[str, Any]],
-    header_names: list[str],
-    db: CourseDatabase | None = None,
-) -> None:
-    logger.info("⚠️  Applying course code matching to %d rows", len(rows))
-
-    if not header_names:
-        return
-    code_col = header_names[0]
-    subj_col = header_names[1] if len(header_names) > 1 else None
-
-    for row in rows:
-        raw = row.get(code_col, "")
-        if not isinstance(raw, str) or not raw.strip():
-            continue
-        matched_code, score, subject = match_course(raw, min_score=70, db=db)
-        logger.info("Course match: %r → %r (score: %d)", raw, matched_code, score)
-        row[code_col] = matched_code
-        if subj_col:
-            row[subj_col] = subject
