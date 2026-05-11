@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from typing import List, Union
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ---------------------------------------------------------------------------
 # Schedule domain models
@@ -18,8 +18,15 @@ class UnitBreakdown(BaseModel):
 
 
 class TimeRange(BaseModel):
-    start: int = Field(..., ge=0, le=1439, examples=[450])
-    end: int = Field(..., ge=0, le=1439, examples=[540])
+    start: int = Field(..., ge=0, le=1439 )
+    end: int = Field(..., ge=0, le=1439)
+    
+    @field_validator('end')
+    @classmethod
+    def end_after_start(cls, v, info):
+        if info.data.get('start') and v <= info.data['start']:
+            raise ValueError('end time must be after start time')
+        return v
 
 
 class Schedule(BaseModel):
