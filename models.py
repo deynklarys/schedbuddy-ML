@@ -46,8 +46,10 @@ class CourseRow(BaseModel):
     code: Optional[str] = None
     subject: Optional[str] = None
     units: Optional[Union[UnitBreakdown, float]] = None
-    class_section: Optional[str] = Field(None, alias="class")
-    schedules: List[Schedule] = Field(default_factory=list)
+    class_section: Optional[str] = Field(None, alias="class", strict=True)
+    schedules: List[Schedule] = Field(default_factory=list, min_length=1)
+    
+    model_config = {"populate_by_name": True}
 
 @dataclass
 class Detection:
