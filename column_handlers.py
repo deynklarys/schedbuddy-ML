@@ -176,6 +176,7 @@ class TimeHandler(ColumnHandler):
             h = 0
         return h * 60 + m
 
+# NOTE: The following handlers are quite lenient in what they accept, as room/faculty fields are often noisy and we don't want to lose valid data if the formatting is unexpected.  They do, however, strip out obviously invalid characters (e.g. punctuation in room names)
 
 class RoomHandler(ColumnHandler):
     is_schedule_field = True
