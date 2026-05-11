@@ -269,3 +269,35 @@ if __name__ == "__main__":
             print(f"  {raw!r:35} → {result}")
         except ValueError as exc:
             print(f"  {raw!r:35} → ERROR: {exc}")
+
+    # --- RoomHandler smoke tests ---
+    rh = get_handler("room")
+    print("\n=== RoomHandler ===")
+    room_cases = [
+        "CS-01-101",
+        "  CS_01_101  ",
+        "CS@01#101",
+        "a ee"
+    ]
+    for raw in room_cases:
+        try: 
+            result = rh.parse_cell(raw)
+            print(f"  {raw!r:20} → {result!r}")
+        except ValueError as exc:
+            print(f"  {raw!r:20} → ERROR: {exc}")
+
+    # --- FacultyHandler smoke tests ---
+    fh = get_handler("faculty")
+    print("\n=== FacultyHandler ===")
+    faculty_cases = [
+        "MIRANDA, F.",
+        "  SANTOS R><>,  ",
+        "SERRANO@K",
+        "a ee"
+    ]
+    for raw in faculty_cases:
+        try: 
+            result = fh.parse_cell(raw)
+            print(f"  {raw!r:20} → {result!r}")
+        except ValueError as exc:
+            print(f"  {raw!r:20} → ERROR: {exc}")
