@@ -236,3 +236,20 @@ if __name__ == "__main__":
         status = "✓" if result == expected else f"✗ (expected {expected})"
         print(f"  {raw!r:12} → {result}  {status}")
  
+    # --- TimeHandler smoke tests ---
+    th = get_handler("time")
+    print("\n=== TimeHandler ===")
+    time_cases = [
+        "7:30 AM - 10:30 AM",
+        "07:30 AM-10:30 AM",
+        "1:00 PM – 4:00 PM",
+        "10:00 am to 01:00 pm",
+        "10:00 am to 10:00 am",
+        "10:00 am to 8:00 am",
+    ]
+    for raw in time_cases:
+        try:
+            result = th.parse_cell(raw)
+            print(f"  {raw!r:35} → {result}")
+        except ValueError as exc:
+            print(f"  {raw!r:35} → ERROR: {exc}")
