@@ -142,13 +142,19 @@ def run_pipeline(img_path: Path):
     # Stage 4: Data Extraction
     # -----------------------------------------------------------------------------
     table_data = extract_table(detector, detections)
+
+    # NOTE: UnitsHandler return a class breakdown dict, which fails CourseRow validation, so we serialize it before validation.
+    serialized_row = [serialize_row(row) for row in table_data.rows]
+    serialized_table_data = TableData(headers=table_data.headers, rows=serialized_row, cells=table_data.cells)
+    
+    normalized_table_data = validate_course_rows(table=serialized_table_data)
+    
     Path(EXTRACTED_JSON).write_text(
         json.dumps(
             {
                 "image file:": str(CROPPED_OUTPUT),
-                "ocr configuration:": TESSERACT_CONFIG,
-                "headers": table_data.headers,
-                "rows": table_data.rows,
+                "headers": normalized_table_data.headers,
+                "rows": normalized_table_data.rows,
             },
             ensure_ascii=False,
             indent=2
