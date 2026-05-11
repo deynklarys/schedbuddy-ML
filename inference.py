@@ -5,7 +5,15 @@ import sys
 
 import cv2
 
-import logging 
+import logging
+
+from ultralytics import YOLO
+from detector import BorderlessTableDetector
+from extraction import extract_table
+from models import TableData
+from preprocess import preprocess
+from postprocess import serialize_row, validate_course_rows
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 logger = logging.getLogger(__name__)
 
@@ -31,15 +39,12 @@ def run_pipeline(img_path: Path):
     # -----------------------------------------------------------------------------
     # Stage 1: Preprocessing
     # -----------------------------------------------------------------------------
-    from preprocess import preprocess
 
     preprocessed = preprocess(str(img_path))
 
     # -----------------------------------------------------------------------------
     # Stage 2: Table Detection and Cropping
     # -----------------------------------------------------------------------------
-
-    from ultralytics import YOLO
 
     model = YOLO("model.pt")
 
@@ -122,11 +127,6 @@ def run_pipeline(img_path: Path):
     # -----------------------------------------------------------------------------
     # Stage 3: Table Structure Detection
     # -----------------------------------------------------------------------------
-    from ultralytics import YOLO
-
-    from config import TESSERACT_CONFIG
-    from detector import BorderlessTableDetector
-    from extraction import extract_table
 
     detector = BorderlessTableDetector(
     image_path=CROPPED_OUTPUT,
