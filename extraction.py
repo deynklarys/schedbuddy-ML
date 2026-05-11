@@ -53,9 +53,17 @@ def match_course(
     min_score: int = 0,
     db: CourseDatabase | None = None,
 ) -> tuple[str, int, str]:
-    return (db or default_course_db).match(extracted_text, min_score)
+    matched_code, score, subject = (db or default_course_db).match(extracted_text, min_score)
+    if score < min_score:
+        logger.info("No match for code %r (best: %r with score %d): sending empty string", extracted_text, matched_code, score)
+        matched_code = ""
+    return matched_code, score, subject
 
-# Header OCR  (runs first, before any data extraction)
+
+# ---------------------------------------------------------------------------
+# Column-handler resolution (runs before cell extraction)
+# ---------------------------------------------------------------------------
+
 def _resolve_column_handlers(
     detector,
     columns: list,
