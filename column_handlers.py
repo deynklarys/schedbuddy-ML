@@ -45,7 +45,8 @@ class ColumnHandler(ABC):
 # Concrete handlers
 class DefaultHandler(ColumnHandler):
     def parse_cell(self, text: str) -> str:
-        return text.strip()
+        cleaned = re.sub(r"[^a-zA-Z0-9\-\s]", "", text).lower().strip()
+        return cleaned
 
 class UnitsHandler(ColumnHandler):
 
