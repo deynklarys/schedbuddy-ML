@@ -136,9 +136,14 @@ class DaysHandler(ColumnHandler):
                     i += len(abbr)
                     break
             else:
-                raise ValueError(
-                    f"Unrecognised day token at position {i}: {text[i:]!r}"
-                )
+                logger.warning(f"Unrecognised day token at position {i}: {text[i:]!r}; sending empty string")
+                result.append("")
+                i += 1
+        
+        if all(day == "" for day in result):
+            logger.warning(f"Failed to parse any valid day tokens from: {text!r}; returning empty list")
+            return []
+            
         return result
 
 
@@ -210,8 +215,27 @@ def get_handler(column_name: str) -> ColumnHandler:
     return COLUMN_REGISTRY.get(column_name, _FALLBACK_HANDLER)
 
 if __name__ == "__main__":
-    # UnitsHandler
+    # --- UnitsHandler smoke tests ---
     handler = get_handler("units")
     handler.configure("Units (Credit/Lec/Lab)")
     print(handler.sub_columns)
     print(handler.parse_cell("a 2,5 1.0"))
+
+    # --- DaysHandler smoke tests ---
+    dh = get_handler("days")
+    cases = [
+        ("MTh",       ["monday", "thursday"]),
+        ("T Th",      ["tuesday", "thursday"]),
+        ("MWF",       ["monday", "wednesday", "friday"]),
+        ("Sa",        ["saturday"]),
+        ("N/A",       []),
+        ("M1Th",      ["monday", "thursday"]),   # digit noise stripped
+        ("",          []),
+        ("a ee ",          []),
+    ]
+    print("=== DaysHandler ===")
+    for raw, expected in cases:
+        result = dh.parse_cell(raw)
+        status = "✓" if result == expected else f"✗ (expected {expected})"
+        print(f"  {raw!r:12} → {result}  {status}")
+ 
