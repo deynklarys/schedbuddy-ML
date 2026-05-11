@@ -1,6 +1,3 @@
-"""Utility functions for image processing and OCR."""
-
-from __future__ import annotations
 from typing import Optional
 from PIL import Image
 import pytesseract
@@ -26,5 +23,6 @@ def bbox_intersection(
 def ocr_crop(image: Image.Image, box: list[int]) -> str:
     """Crop image to box and run Tesseract OCR."""
 
-    crop = image.crop(tuple(box))
+    crop_box: tuple[int, int, int, int] = (box[0], box[1], box[2], box[3])
+    crop = image.crop(crop_box)
     return  pytesseract.image_to_string(crop, config=TESSERACT_CONFIG)
