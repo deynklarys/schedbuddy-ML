@@ -30,11 +30,17 @@ class TimeRange(BaseModel):
 
 
 class Schedule(BaseModel):
-    days: List[str] = Field(default_factory=list, examples=[["monday", "wednesday"]])
-    time: Optional[TimeRange] = None
+    days: List[str] = Field(default_factory=list,  min_length=1)
+    time: TimeRange
     room: Optional[str] = None
     faculty: Optional[str] = None
 
+    # mode='after' — validate parsed value
+    @field_validator('days', mode='after')
+    def validate_days_after(cls, v):
+        if len(v) == 0:
+            raise ValueError('must have at least one day')
+        return v
 
 class CourseRow(BaseModel):
     code: Optional[str] = None
