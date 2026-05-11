@@ -18,7 +18,7 @@ from rapidfuzz import fuzz
 from abc import ABC, abstractmethod
 from typing import Any
 
-from models import UnitBreakdown
+from models import TimeRange, UnitBreakdown
 
 logger = logging.getLogger(__name__)
 
@@ -147,9 +147,6 @@ class DaysHandler(ColumnHandler):
         return result
 
 
-import re
-from datetime import time
-
 class TimeHandler(ColumnHandler):
     is_schedule_field = True
 
@@ -158,7 +155,7 @@ class TimeHandler(ColumnHandler):
         re.IGNORECASE
     )
 
-    def parse_cell(self, text: str) -> dict[str, int]:
+    def parse_cell(self, text: str) -> TimeRange:
         matches = self._TIME_RE.findall(text)
         if len(matches) < 2:
             raise ValueError(
@@ -167,7 +164,7 @@ class TimeHandler(ColumnHandler):
 
         start = self._to_minutes(*matches[0])
         end   = self._to_minutes(*matches[1])
-        return {"start": start, "end": end}
+        return TimeRange(start=start, end=end)
 
     @staticmethod
     def _to_minutes(hour: str, minute: str, meridian: str) -> int:
