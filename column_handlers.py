@@ -182,7 +182,15 @@ class RoomHandler(ColumnHandler):
 
     def parse_cell(self, text: str) -> str:
         """Return the room location as a string."""
-        return text.strip()
+        cleaned = text.strip()
+
+        if not cleaned:
+            return ""
+        
+        cleaned = re.sub(r'[^a-zA-Z0-9\s\-]', ' ', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+
+        return cleaned
 
 
 class FacultyHandler(ColumnHandler):
@@ -190,7 +198,15 @@ class FacultyHandler(ColumnHandler):
 
     def parse_cell(self, text: str) -> str:
         """Return the faculty name as a string."""
-        return text.strip()
+        cleaned = text.strip()
+        
+        if not cleaned:
+            return ""
+        
+        cleaned = re.sub(r'[^a-zA-Z\s\.\-\,]', '', cleaned)
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+                    
+        return cleaned
 
 
 # Registry
