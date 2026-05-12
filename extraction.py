@@ -93,17 +93,18 @@ def _resolve_column_handlers(
     names:    list[str]           = []
     handlers: list[ColumnHandler] = []
 
-    for col in columns:
+    # FIXME: assign default headers due to poor structural detection; can remove once structure detection is improved.
+    for col, header_name in zip(columns, HEADER_NAMES):
         cell = bbox_intersection(header_box, col.bbox)
         raw  = ocr_crop(detector.image, cell).strip() if cell else ""
 
         canonical, score = match_header(raw, min_score=70)
-        logger.info("Header match: %r → %r (score: %d)", raw, canonical, score)
+        logger.info("Header match: %r → %r (score: %d): but using assigned header names", raw, canonical, score)
 
-        handler = get_handler(canonical)
+        handler = get_handler(header_name)
         handler.configure(raw)
 
-        names.append(canonical)
+        names.append(header_name)
         handlers.append(handler)
 
     return names, handlers
