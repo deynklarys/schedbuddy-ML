@@ -13,6 +13,7 @@ from column_handlers import ColumnHandler, get_handler
 from course_db import CourseDatabase
 from models import CellRecord, Detection, TableData
 from utils import bbox_intersection, ocr_crop
+from postprocess import fill_missing_slots
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +267,11 @@ def extract_table(
 
         rows_as_dicts.extend(expanded)
 
-    # 3. Post-process: fuzzy-match course codes
+    # 3. Fallback: fill any schedule slot whose days or time could not be
+    #    parsed from OCR with the earliest non-overlapping free slot.
+    fill_missing_slots(rows_as_dicts)
+
+    # 4. Post-process: fuzzy-match course codes against the database.
     _apply_course_matching(rows_as_dicts, header_names, db=db)
 
     logger.info(
