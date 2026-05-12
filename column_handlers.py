@@ -16,7 +16,7 @@ import logging
 import re
 from rapidfuzz import fuzz
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Optional, Tuple
 
 from models import TimeRange, UnitBreakdown
 
@@ -151,26 +151,41 @@ class DaysHandler(ColumnHandler):
 class TimeHandler(ColumnHandler):
     is_schedule_field = True
 
+    # Matches "HH:MM AM/PM" with OCR-tolerant separators and optional dots
     _TIME_RE = re.compile(
-        r'(\d{1,2}):(\d{2})\s*(AM|PM)',
+        r'(\d{1,2})[:;](\d{2})\s*([AaPp]\.?\s*[Mm]\.?)',
         re.IGNORECASE
     )
+    _RANGE_SEP = re.compile(r'\s*[-–—]\s*')
 
-    def parse_cell(self, text: str) -> TimeRange:
-        matches = self._TIME_RE.findall(text)
-        if len(matches) < 2:
-            raise ValueError(
-                f"Expected two time values (HH:MM AM/PM) in: {text!r}"
-            )
+    def parse_cell(self, text: str) -> dict[str, int]:
+        # Normalise OCR noise: P.M. → PM, semicolons, extra spaces
+        cleaned = re.sub(r'([AaPp])\.?\s*([Mm])\.?', r'\1\2', text)
+        cleaned = re.sub(r';', ':', cleaned)
+        cleaned = ' '.join(cleaned.split())
 
-        start = self._to_minutes(*matches[0])
-        end   = self._to_minutes(*matches[1])
-        return TimeRange(start=start, end=end)
+        parts = self._RANGE_SEP.split(cleaned, maxsplit=1)
+        matches = [self._TIME_RE.search(p) for p in parts]
+
+        if not matches[0] or len(matches) < 2 or not matches[1]:
+            raise ValueError(f"Expected 'HH:MM AM/PM - HH:MM AM/PM', got: {text!r}")
+
+        start = self._to_minutes(*matches[0].groups())
+        end   = self._to_minutes(*matches[1].groups())
+
+        if start >= end:
+            raise ValueError(f"Invalid time range in: {text!r}")
+
+        return {"start": start, "end": end}
 
     @staticmethod
     def _to_minutes(hour: str, minute: str, meridian: str) -> int:
         h, m = int(hour), int(minute)
-        mer = meridian.upper()
+        mer = re.sub(r'[.\s]', '', meridian).upper()
+
+        if not (1 <= h <= 12 and 0 <= m <= 59):
+            raise ValueError(f"Out-of-range time: {hour}:{minute}")
+
         if mer == "PM" and h != 12:
             h += 12
         elif mer == "AM" and h == 12:
