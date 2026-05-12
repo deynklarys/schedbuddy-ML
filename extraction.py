@@ -36,11 +36,19 @@ def _best_fuzzy_match(
     min_score: int = 0,
 ) -> tuple[str, float]:
     best_name, best_score = query, -1
+    query_norm = query.lower().strip()
     for candidate in candidates:
-        score = max(
-            fuzz.partial_ratio(query, candidate),
-            fuzz.ratio(query, candidate),
+        cand_norm = candidate.lower()
+        raw = max(
+            fuzz.partial_ratio(query_norm, cand_norm),
+            fuzz.ratio(query_norm, cand_norm),
         )
+        len_ratio = (
+            min(len(query_norm), len(cand_norm))
+            / max(len(query_norm), len(cand_norm))
+            if max(len(query_norm), len(cand_norm)) > 0 else 1.0
+        )
+        score = raw * len_ratio
         if score > min_score and score > best_score:
             best_name, best_score = candidate, score
     return best_name, best_score

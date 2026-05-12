@@ -102,12 +102,22 @@ class CourseDatabase:
     ) -> tuple[str, int, str]:
 
         best_code, best_score = query, -1
+        query_norm = query.lower().strip()
 
         for code in self._data:
-            score = max(
-                fuzz.partial_ratio(query, code),
-                fuzz.ratio(query, code),
+            code_norm = code.lower().strip()
+            raw = max(
+                fuzz.partial_ratio(query_norm, code_norm),
+                fuzz.ratio(query_norm, code_norm),
             )
+            # Penalize candidates whose length differs greatly from the query,
+            # preventing short strings (e.g. "Math") from winning via partial_ratio.
+            len_ratio = (
+                min(len(query_norm), len(code_norm))
+                / max(len(query_norm), len(code_norm))
+                if max(len(query_norm), len(code_norm)) > 0 else 1.0
+            )
+            score = raw * len_ratio
             if score > min_score and score > best_score:
                 best_code, best_score = code, score
 
